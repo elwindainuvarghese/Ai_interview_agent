@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, LogOut, Sparkles, CheckCircle2, Shield } from 'lucide-react';
+import { useProctoring } from '../hooks/useProctoring';
+import ProctorMonitor from './ProctorMonitor';
 import '../style.css';
 import '../components/button.css';
 import '../components/orb.css';
@@ -23,6 +25,28 @@ export default function OriginalGithubUI({ user, userRole, onLogout, onSwitchRol
   const chatHistoryRef = useRef(null);
   const animationFrameRef = useRef(null);
   const timeRef = useRef(0);
+
+  // Initialize Proctoring Engine Hook
+  const proctorState = useProctoring({
+    isEnabled: true,
+    onTerminate: async ({ reason }) => {
+      setIsDone(true);
+      setIsSpeaking(false);
+      // Log integrity violation breach to backend
+      try {
+        await fetch(API_BASE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: sessionId || 'session-breached',
+            message: `[SECURITY BREACH TERMINATION]: ${reason}`
+          })
+        });
+      } catch (e) {
+        console.warn("Proctor backend notification error:", e);
+      }
+    }
+  });
 
   // Generate Session ID
   const generateNewSessionId = () => {
@@ -96,6 +120,7 @@ export default function OriginalGithubUI({ user, userRole, onLogout, onSwitchRol
 
   // Phase 1: Start Interview with FastAPI Backend
   const handleStartInterview = async () => {
+    if (proctorState.isTerminated) return;
     const newId = generateNewSessionId();
     setSessionId(newId);
     setIsLoading(true);
@@ -141,7 +166,7 @@ export default function OriginalGithubUI({ user, userRole, onLogout, onSwitchRol
   // Phase 2 & 3: Send Candidate Turn Message
   const handleSendMessage = async (e) => {
     e?.preventDefault();
-    if (!inputText.trim() || isLoading || !sessionId || isDone) return;
+    if (!inputText.trim() || isLoading || !sessionId || isDone || proctorState.isTerminated) return;
 
     const userText = inputText.trim();
     setInputText('');
@@ -180,7 +205,10 @@ export default function OriginalGithubUI({ user, userRole, onLogout, onSwitchRol
     }
   };
 
-  // Sanitize raw [DAY:X] tags from text
+  const handleRestartAll = () => {
+    window.location.reload();
+  };
+
   const sanitizeText = (text) => {
     return text ? text.replace(/\[DAY:\d+\]/gi, '').trim() : '';
   };
@@ -193,6 +221,9 @@ export default function OriginalGithubUI({ user, userRole, onLogout, onSwitchRol
 
   return (
     <div id="app">
+      {/* Real-time AI Proctoring Monitor UI Component */}
+      <ProctorMonitor proctorState={proctorState} onRestart={handleRestartAll} />
+
       {/* User Auth Banner Bar */}
       <div style={{
         display: 'flex',
@@ -206,7 +237,7 @@ export default function OriginalGithubUI({ user, userRole, onLogout, onSwitchRol
         fontSize: '0.85rem',
         color: '#a0a5b5'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', itemsCenter: 'center', gap: '10px' }}>
           <div style={{
             width: '28px',
             height: '28px',
@@ -328,16 +359,16 @@ export default function OriginalGithubUI({ user, userRole, onLogout, onSwitchRol
               type="text"
               id="chat-input"
               className="pill-input"
-              placeholder={isDone ? "Interview complete" : "Type your response..."}
+              placeholder={isDone || proctorState.isTerminated ? "Interview complete or locked" : "Type your response..."}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              disabled={isLoading || !sessionId || isDone}
+              disabled={isLoading || !sessionId || isDone || proctorState.isTerminated}
             />
             <button
               type="submit"
               id="chat-send"
               className="primary-btn glow-btn chat-send-btn"
-              disabled={!inputText.trim() || isLoading || !sessionId || isDone}
+              disabled={!inputText.trim() || isLoading || !sessionId || isDone || proctorState.isTerminated}
             >
               Send
             </button>
@@ -352,9 +383,9 @@ export default function OriginalGithubUI({ user, userRole, onLogout, onSwitchRol
             id="start-btn"
             className="primary-btn glow-btn"
             onClick={handleStartInterview}
-            disabled={isLoading || isSpeaking}
+            disabled={isLoading || isSpeaking || proctorState.isTerminated}
           >
-            {isSpeaking ? 'Interview in Progress...' : 'Start Interview'}
+            {proctorState.isTerminated ? 'Assessment Terminated' : isSpeaking ? 'Interview in Progress...' : 'Start Interview'}
           </button>
         </section>
 
