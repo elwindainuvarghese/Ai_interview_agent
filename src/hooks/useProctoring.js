@@ -5,6 +5,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
   const [micActive, setMicActive] = useState(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [lookingAwayCount, setLookingAwayCount] = useState(0);
+  const [phoneDetectedCount, setPhoneDetectedCount] = useState(0);
   const [attentionScore, setAttentionScore] = useState(98);
   const [isTerminated, setIsTerminated] = useState(false);
   const [terminationReason, setTerminationReason] = useState('');
@@ -12,8 +13,17 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
   const [audioLevel, setAudioLevel] = useState(0);
   const [proctorLogs, setProctorLogs] = useState([]);
   
-  // Real-time AI Vision tracking metrics for Canvas overlay
-  const [facePosition, setFacePosition] = useState({ x: 0.5, y: 0.5, width: 0.4, height: 0.5, isCentered: true, poseLabel: 'CENTERED' });
+  // Real-time AI Vision tracking state
+  const [facePosition, setFacePosition] = useState({
+    x: 0.5,
+    y: 0.5,
+    width: 0.4,
+    height: 0.5,
+    isCentered: true,
+    poseLabel: 'CENTERED',
+    isPhoneDetected: false,
+    faceCount: 1,
+  });
 
   const videoRef = useRef(null);
   const overlayCanvasRef = useRef(null);
@@ -21,7 +31,10 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const lookingAwayTimerRef = useRef(null);
+  const phoneTimerRef = useRef(null);
+
   const isLookingAwayRef = useRef(false);
+  const isPhoneDetectedRef = useRef(false);
 
   const addLog = useCallback((message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString();
@@ -46,14 +59,14 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         mediaStreamRef.current = stream;
         setCameraActive(true);
         setMicActive(true);
-        addLog("Webcam & Audio stream connected.", "success");
+        addLog("High-power AI Camera & Audio stream active.", "success");
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch((e) => console.warn("Video play notice:", e));
         }
 
-        // Web Audio API analyzer
+        // Web Audio API speech analyzer
         try {
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           audioContextRef.current = audioCtx;
@@ -75,9 +88,8 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
             const normalizedLevel = Math.min(100, Math.round((average / 128) * 100));
             setAudioLevel(normalizedLevel);
 
-            // Deduct attention score slightly if excessive noise / speech detected
-            if (normalizedLevel > 60) {
-              setAttentionScore((prev) => Math.max(25, Number((prev - 0.08).toFixed(1))));
+            if (normalizedLevel > 65) {
+              setAttentionScore((prev) => Math.max(15, Number((prev - 0.12).toFixed(1))));
             }
 
             requestAnimationFrame(checkAudio);
@@ -106,7 +118,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     };
   }, [isEnabled, isTerminated, addLog]);
 
-  // 2. Real-Time AI Vision Face Tracking & Cyberpunk HUD Canvas Overlay
+  // 2. High-Power AI Vision Face, Gaze & Mobile Phone Detection Loop
   useEffect(() => {
     if (!isEnabled || isTerminated || !cameraActive) return;
 
@@ -116,11 +128,8 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     sampleCanvas.width = 160;
     sampleCanvas.height = 120;
 
-    let frameCounter = 0;
-
-    const runVisionTracking = () => {
+    const runUltraVisionTracking = () => {
       if (isTerminated) return;
-      frameCounter++;
 
       const video = videoRef.current;
       const overlayCanvas = overlayCanvasRef.current;
@@ -135,16 +144,18 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           overlayCanvas.height = height;
         }
 
-        // Draw video frame to sample canvas for luminance/centroid processing
         sampleCtx.drawImage(video, 0, 0, 160, 120);
         const imgData = sampleCtx.getImageData(0, 0, 160, 120);
         const pixels = imgData.data;
 
-        let totalWeight = 0;
+        let skinWeight = 0;
         let weightedX = 0;
         let weightedY = 0;
         let leftLuma = 0;
         let rightLuma = 0;
+        let topLuma = 0;
+        let bottomLuma = 0;
+        let darkObjectPixelsInBottom = 0;
 
         for (let i = 0; i < pixels.length; i += 16) {
           const r = pixels[i];
@@ -152,36 +163,64 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           const b = pixels[i + 2];
           const luma = 0.299 * r + 0.587 * g + 0.114 * b;
 
-          // Skin tone weight bias
-          if (r > 60 && g > 40 && b > 20 && r > b) {
-            const pixelIdx = i / 4;
-            const x = pixelIdx % 160;
-            const y = Math.floor(pixelIdx / 160);
+          const pixelIdx = i / 4;
+          const x = pixelIdx % 160;
+          const y = Math.floor(pixelIdx / 160);
 
+          // Skin tone luminance centroid
+          if (r > 50 && g > 30 && b > 15 && r > b && (r - g) > 5) {
             weightedX += x * luma;
             weightedY += y * luma;
-            totalWeight += luma;
+            skinWeight += luma;
 
             if (x < 80) leftLuma += luma;
             else rightLuma += luma;
+
+            if (y < 60) topLuma += luma;
+            else bottomLuma += luma;
+          }
+
+          // Detect phone / handheld dark device shapes in lower frame
+          if (y > 70 && luma < 35 && (Math.abs(r - g) < 15)) {
+            darkObjectPixelsInBottom++;
           }
         }
 
         let faceCenterX = 0.5;
         let faceCenterY = 0.5;
+        let faceCount = 1;
 
-        if (totalWeight > 0) {
-          faceCenterX = weightedX / totalWeight / 160;
-          faceCenterY = weightedY / totalWeight / 120;
+        if (skinWeight > 500) {
+          faceCenterX = weightedX / skinWeight / 160;
+          faceCenterY = weightedY / skinWeight / 120;
+        } else {
+          faceCount = 0; // No face detected in frame
         }
 
-        const asymmetry = Math.abs(leftLuma - rightLuma) / (leftLuma + rightLuma || 1);
+        // HIGH SENSITIVITY TIGHTENED THRESHOLDS
         const xOffset = Math.abs(faceCenterX - 0.5);
-        const isLookingAway = xOffset > 0.18 || asymmetry > 0.4;
+        const yOffset = faceCenterY - 0.5;
+        const lumaAsymmetry = Math.abs(leftLuma - rightLuma) / (leftLuma + rightLuma || 1);
+
+        // Sensitive detection for sideways glance, head turned, or looking down at phone
+        const isSidewaysLeft = faceCenterX < 0.42 || (lumaAsymmetry > 0.25 && leftLuma < rightLuma);
+        const isSidewaysRight = faceCenterX > 0.58 || (lumaAsymmetry > 0.25 && rightLuma < leftLuma);
+        const isLookingDown = yOffset > 0.15 || (bottomLuma / (topLuma + 1) > 1.8);
+        const isPhoneInFrame = darkObjectPixelsInBottom > 85 && isLookingDown;
+
+        const isLookingAway = isSidewaysLeft || isSidewaysRight || isLookingDown || faceCount === 0;
 
         let poseLabel = 'CENTERED';
-        if (isLookingAway) {
-          poseLabel = faceCenterX < 0.45 ? 'LOOKING LEFT' : faceCenterX > 0.55 ? 'LOOKING RIGHT' : 'GAZE DEVIATION';
+        if (faceCount === 0) {
+          poseLabel = 'NO FACE DETECTED';
+        } else if (isPhoneInFrame) {
+          poseLabel = 'PHONE / DEVICE DETECTED';
+        } else if (isSidewaysLeft) {
+          poseLabel = 'SIDEWAYS (LEFT)';
+        } else if (isSidewaysRight) {
+          poseLabel = 'SIDEWAYS (RIGHT)';
+        } else if (isLookingDown) {
+          poseLabel = 'LOOKING DOWN';
         }
 
         setFacePosition({
@@ -189,130 +228,143 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           y: faceCenterY,
           width: 0.4,
           height: 0.5,
-          isCentered: !isLookingAway,
-          poseLabel
+          isCentered: !isLookingAway && !isPhoneInFrame,
+          poseLabel,
+          isPhoneDetected: isPhoneInFrame,
+          faceCount
         });
 
-        // Update Dynamic Attention Score
-        if (isLookingAway) {
-          setAttentionScore((prev) => Math.max(15, Number((prev - 0.35).toFixed(1))));
+        // Dynamic Attention Score Recalculations
+        if (isLookingAway || isPhoneInFrame) {
+          setAttentionScore((prev) => Math.max(10, Number((prev - 0.6).toFixed(1))));
 
+          // Trigger Gaze Strike Timer (1.5 seconds high sensitivity)
           if (!isLookingAwayRef.current) {
             isLookingAwayRef.current = true;
             lookingAwayTimerRef.current = setTimeout(() => {
               setLookingAwayCount((prev) => {
                 const newGazeCount = prev + 1;
-                addLog(`Gaze Violation Strike ${newGazeCount}/3: Head turned (${poseLabel}).`, "warning");
+                addLog(`High-Power Vision Alert ${newGazeCount}/3: Candidate ${poseLabel}`, "danger");
 
                 if (newGazeCount >= 3) {
                   setIsTerminated(true);
-                  const msg = "Integrity Violation: Repeatedly looking away from camera screen.";
+                  const msg = `Integrity Breach: Repeated gaze deviation or looking away (${poseLabel}).`;
                   setTerminationReason(msg);
                   if (onTerminate) onTerminate({ reason: msg, lookingAwayCount: newGazeCount });
                 } else {
                   setActiveWarning({
-                    title: `GAZE ALERT: Strike ${newGazeCount}/3`,
-                    message: `Head pose anomaly detected (${poseLabel}). Please maintain direct eye contact with the screen.`,
+                    title: `VISION INTEGRITY ALERT: Strike ${newGazeCount}/3`,
+                    message: `AI Vision detected ${poseLabel}. Please maintain direct head alignment and eye contact with the camera screen.`,
                     type: 'gaze'
                   });
                 }
                 return newGazeCount;
               });
-            }, 3000);
+            }, 1500); // 1.5 seconds sensitivity
+          }
+
+          // Trigger Phone Detection Alert
+          if (isPhoneInFrame && !isPhoneDetectedRef.current) {
+            isPhoneDetectedRef.current = true;
+            setPhoneDetectedCount((p) => p + 1);
+            addLog("CRITICAL SECURITY ALERT: Secondary Mobile Device detected in frame!", "critical");
+            setActiveWarning({
+              title: "CRITICAL: MOBILE PHONE DETECTED!",
+              message: "AI Vision detected a secondary handheld device or phone in the camera frame! Usage of unauthorized devices will terminate your interview immediately.",
+              type: 'phone'
+            });
           }
         } else {
-          setAttentionScore((prev) => Math.min(100, Number((prev + 0.15).toFixed(1))));
+          setAttentionScore((prev) => Math.min(100, Number((prev + 0.2).toFixed(1))));
           if (isLookingAwayRef.current) {
             isLookingAwayRef.current = false;
             if (lookingAwayTimerRef.current) clearTimeout(lookingAwayTimerRef.current);
           }
+          if (isPhoneDetectedRef.current) {
+            isPhoneDetectedRef.current = false;
+          }
         }
 
-        // Render Futuristic AI Cyberpunk HUD Mesh Overlay on Canvas
+        // Render High-Impact Cyberpunk AI Vision Overlay Canvas
         overlayCtx.clearRect(0, 0, width, height);
 
-        const boxX = (faceCenterX - 0.2) * width;
-        const boxY = (faceCenterY - 0.25) * height;
-        const boxW = 0.4 * width;
-        const boxH = 0.5 * height;
+        const boxX = (faceCenterX - 0.22) * width;
+        const boxY = (faceCenterY - 0.28) * height;
+        const boxW = 0.44 * width;
+        const boxH = 0.56 * height;
 
-        const mainColor = isLookingAway ? '#f43f5e' : '#00f3ff';
-        const shadowColor = isLookingAway ? 'rgba(244, 63, 94, 0.6)' : 'rgba(0, 243, 255, 0.6)';
+        const hudColor = isPhoneInFrame ? '#f43f5e' : isLookingAway ? '#f59e0b' : '#00f3ff';
+        const shadowGlow = isPhoneInFrame ? 'rgba(244, 63, 94, 0.8)' : isLookingAway ? 'rgba(245, 158, 11, 0.8)' : 'rgba(0, 243, 255, 0.8)';
 
-        // Draw Floating Target Box Reticle Corners
-        overlayCtx.lineWidth = 2.5;
-        overlayCtx.strokeStyle = mainColor;
-        overlayCtx.shadowBlur = 12;
-        overlayCtx.shadowColor = shadowColor;
+        // Draw Bounding Reticle Target Corners
+        overlayCtx.lineWidth = 3;
+        overlayCtx.strokeStyle = hudColor;
+        overlayCtx.shadowBlur = 16;
+        overlayCtx.shadowColor = shadowGlow;
 
-        const cornerLen = 20;
-        // Top-Left
+        const cLen = 24;
+        // Top-Left Corner
         overlayCtx.beginPath();
-        overlayCtx.moveTo(boxX, boxY + cornerLen);
+        overlayCtx.moveTo(boxX, boxY + cLen);
         overlayCtx.lineTo(boxX, boxY);
-        overlayCtx.lineTo(boxX + cornerLen, boxY);
+        overlayCtx.lineTo(boxX + cLen, boxY);
         overlayCtx.stroke();
 
-        // Top-Right
+        // Top-Right Corner
         overlayCtx.beginPath();
-        overlayCtx.moveTo(boxX + boxW - cornerLen, boxY);
+        overlayCtx.moveTo(boxX + boxW - cLen, boxY);
         overlayCtx.lineTo(boxX + boxW, boxY);
-        overlayCtx.lineTo(boxX + boxW, boxY + cornerLen);
+        overlayCtx.lineTo(boxX + boxW, boxY + cLen);
         overlayCtx.stroke();
 
-        // Bottom-Left
+        // Bottom-Left Corner
         overlayCtx.beginPath();
-        overlayCtx.moveTo(boxX, boxY + boxH - cornerLen);
+        overlayCtx.moveTo(boxX, boxY + boxH - cLen);
         overlayCtx.lineTo(boxX, boxY + boxH);
-        overlayCtx.lineTo(boxX + cornerLen, boxY + boxH);
+        overlayCtx.lineTo(boxX + cLen, boxY + boxH);
         overlayCtx.stroke();
 
-        // Bottom-Right
+        // Bottom-Right Corner
         overlayCtx.beginPath();
-        overlayCtx.moveTo(boxX + boxW - cornerLen, boxY + boxH);
+        overlayCtx.moveTo(boxX + boxW - cLen, boxY + boxH);
         overlayCtx.lineTo(boxX + boxW, boxY + boxH);
-        overlayCtx.lineTo(boxX + boxW, boxY + boxH - cornerLen);
+        overlayCtx.lineTo(boxX + boxW, boxY + boxH - cLen);
         overlayCtx.stroke();
 
-        // Draw Center Crosshair Pupil Target
+        // Draw Laser Crosshair Reticle Center
         const targetX = faceCenterX * width;
         const targetY = faceCenterY * height;
 
         overlayCtx.beginPath();
-        overlayCtx.arc(targetX, targetY, 4, 0, Math.PI * 2);
-        overlayCtx.fillStyle = mainColor;
+        overlayCtx.arc(targetX, targetY, 6, 0, Math.PI * 2);
+        overlayCtx.fillStyle = hudColor;
         overlayCtx.fill();
 
-        // Crosshair Lines
-        overlayCtx.lineWidth = 1;
+        overlayCtx.lineWidth = 1.5;
         overlayCtx.beginPath();
-        overlayCtx.moveTo(targetX - 12, targetY);
-        overlayCtx.lineTo(targetX + 12, targetY);
-        overlayCtx.moveTo(targetX, targetY - 12);
-        overlayCtx.lineTo(targetX, targetY + 12);
+        overlayCtx.moveTo(targetX - 16, targetY);
+        overlayCtx.lineTo(targetX + 16, targetY);
+        overlayCtx.moveTo(targetX, targetY - 16);
+        overlayCtx.lineTo(targetX, targetY + 16);
         overlayCtx.stroke();
 
-        // Draw Facial Landmark Dots Matrix
-        const dots = [
-          { x: targetX - 22, y: targetY - 15 }, // Left Eye
-          { x: targetX + 22, y: targetY - 15 }, // Right Eye
-          { x: targetX, y: targetY + 5 },       // Nose Tip
-          { x: targetX - 15, y: targetY + 28 }, // Mouth Left
-          { x: targetX + 15, y: targetY + 28 }, // Mouth Right
-        ];
-
-        overlayCtx.fillStyle = mainColor;
-        dots.forEach(dot => {
-          overlayCtx.beginPath();
-          overlayCtx.arc(dot.x, dot.y, 2, 0, Math.PI * 2);
-          overlayCtx.fill();
-        });
+        // Draw Phone Bounding Box Overlay if Phone Detected
+        if (isPhoneInFrame) {
+          overlayCtx.lineWidth = 2;
+          overlayCtx.strokeStyle = '#f43f5e';
+          overlayCtx.setLineDash([4, 4]);
+          overlayCtx.strokeRect(width * 0.25, height * 0.6, width * 0.5, height * 0.35);
+          overlayCtx.setLineDash([]);
+          overlayCtx.fillStyle = '#f43f5e';
+          overlayCtx.font = 'bold 12px monospace';
+          overlayCtx.fillText('⚠ PHONE / DEVICE DETECTED', width * 0.26, height * 0.65);
+        }
       }
 
-      animFrameId = requestAnimationFrame(runVisionTracking);
+      animFrameId = requestAnimationFrame(runUltraVisionTracking);
     };
 
-    runVisionTracking();
+    runUltraVisionTracking();
 
     return () => {
       if (animFrameId) cancelAnimationFrame(animFrameId);
@@ -381,6 +433,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     micActive,
     tabSwitchCount,
     lookingAwayCount,
+    phoneDetectedCount,
     attentionScore,
     isTerminated,
     terminationReason,
