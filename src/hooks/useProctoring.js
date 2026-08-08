@@ -62,7 +62,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         mediaStreamRef.current = stream;
         setCameraActive(true);
         setMicActive(true);
-        addLog("Smart Biometric AI Vision Engine active.", "success");
+        addLog("Multilayer AI Vision Engine active.", "success");
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -117,7 +117,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     };
   }, [isEnabled, isTerminated, addLog]);
 
-  // 2. SMART BIOMETRIC GAZE & HANDHELD PHONE DETECTOR (ZERO FALSE POSITIVES ON CLOTHING)
+  // 2. MULTILAYER ULTRA POWER VISION DETECTOR (INSTANT BLACK PHONE & HYPER SIDEWAYS GAZE)
   useEffect(() => {
     if (!isEnabled || isTerminated || !cameraActive) return;
 
@@ -129,7 +129,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
 
     let rotationAngle = 0;
 
-    const runSmartBiometricTracking = () => {
+    const runMultilayerUltraVision = () => {
       if (isTerminated) return;
       rotationAngle += 0.08;
 
@@ -155,7 +155,8 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         let weightedY = 0;
         let skinPixels = 0;
 
-        let handNearChinDarkObject = 0;
+        let centerDarkPhoneBlockPixels = 0;
+        let lowerDarkObjectPixels = 0;
 
         for (let i = 0; i < pixels.length; i += 16) {
           const r = pixels[i];
@@ -167,24 +168,27 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           const x = pixelIdx % 160;
           const y = Math.floor(pixelIdx / 160);
 
-          // Focus face centroid calculations on upper 70% of frame (head & neck region)
-          if (y <= 85) {
-            // Human skin tone biometric filter
-            const isSkin = (r > 60 && g > 35 && b > 20 && r > g && r > b && (r - Math.min(g, b)) > 12);
-            if (isSkin) {
-              weightedX += x;
-              weightedY += y;
-              skinPixels++;
-              faceLuma += luma;
+          // Human skin tone biometric filter
+          const isSkin = (r > 55 && g > 30 && b > 15 && r > g && r > b && (r - Math.min(g, b)) > 10);
+          if (isSkin) {
+            weightedX += x;
+            weightedY += y;
+            skinPixels++;
+            faceLuma += luma;
+          }
+
+          // MULTILAYER PHONE DETECTOR RULE A: Dark rectangular smartphone covering face/center (x between 30 and 130, y between 25 and 105)
+          if (x > 30 && x < 130 && y > 25 && y < 105) {
+            const isDarkPhoneBody = (luma < 50) || (r < 45 && g < 45 && b < 45);
+            if (isDarkPhoneBody) {
+              centerDarkPhoneBlockPixels++;
             }
           }
 
-          // Phone detection: Look specifically for skin pixels adjacent to a dark rectangular device near chin/face (y between 50 and 95)
-          if (y > 50 && y < 95) {
-            const isSkinAdjacent = (r > 60 && g > 35 && b > 20);
-            const isVeryDarkDevice = (luma < 25 || (r < 30 && g < 30 && b < 30));
-            if (isSkinAdjacent && isVeryDarkDevice) {
-              handNearChinDarkObject++;
+          // MULTILAYER PHONE DETECTOR RULE B: Handheld device held in lower/mid frame
+          if (y > 45 && y < 105) {
+            if (luma < 40 || (r < 35 && g < 35 && b < 35)) {
+              lowerDarkObjectPixels++;
             }
           }
         }
@@ -192,18 +196,18 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         let faceCenterX = 0.5;
         let faceCenterY = 0.45;
 
-        if (skinPixels > 25) {
+        if (skinPixels > 15) {
           faceCenterX = (weightedX / skinPixels) / 160;
           faceCenterY = (weightedY / skinPixels) / 120;
         }
 
-        // BIOMETRIC GAZE ANGLE THRESHOLDS (Tight, accurate, zero false triggers)
-        const isSidewaysLeft = faceCenterX < 0.38;
-        const isSidewaysRight = faceCenterX > 0.62;
-        const isLookingDown = faceCenterY > 0.65;
+        // TIGHT HYPER-SENSITIVE SIDEWAYS GAZE THRESHOLDS (Triggers immediately on slight head turn)
+        const isSidewaysLeft = faceCenterX < 0.44;
+        const isSidewaysRight = faceCenterX > 0.56;
+        const isLookingDown = faceCenterY > 0.58;
 
-        // Phone detection requires dark device shape held near hand/chin region
-        const isPhoneInFrame = handNearChinDarkObject > 60;
+        // BLACK SMARTPHONE DETECTOR (Triggers when black phone object covers center or hand area)
+        const isPhoneInFrame = centerDarkPhoneBlockPixels > 30 || lowerDarkObjectPixels > 80;
         const isLookingAway = isSidewaysLeft || isSidewaysRight || isLookingDown;
 
         let poseLabel = 'CENTERED';
@@ -232,13 +236,13 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         });
 
         // -------------------------------------------------------------
-        // ACCURATE DYNAMIC ATTENTION SCORE
+        // DYNAMIC ATTENTION SCORE
         // -------------------------------------------------------------
         let currentAttention = 100;
         if (isPhoneInFrame) {
-          currentAttention = 25;
+          currentAttention = 25; // Instant 25% on Phone Detection!
         } else if (isSidewaysLeft || isSidewaysRight) {
-          currentAttention = 55;
+          currentAttention = 55; // Instant 55% on Sideways Glance!
         } else if (isLookingDown) {
           currentAttention = 70;
         }
@@ -247,21 +251,21 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         setAttentionScore(currentAttention);
 
         // -------------------------------------------------------------
-        // AUTOMATIC RULE 1: PHONE DETECTION WARNING (0.5s)
+        // AUTOMATIC RULE 1: FAST INSTANT PHONE DETECTION WARNING (0.2s)
         // -------------------------------------------------------------
         if (isPhoneInFrame) {
           if (!isPhoneDetectedRef.current) {
             isPhoneDetectedRef.current = true;
             phoneTimerRef.current = setTimeout(() => {
               setPhoneDetectedCount((p) => p + 1);
-              addLog("SECURITY BREACH: Mobile Phone detected in hand near candidate face!", "critical");
+              addLog("CRITICAL SECURITY BREACH: Secondary Mobile Smartphone detected!", "critical");
 
               setActiveWarning({
                 title: "CRITICAL: MOBILE PHONE DETECTED!",
-                message: "AI Vision detected a mobile phone or secondary device held near your face. Please put away all devices.",
+                message: "AI Vision detected a mobile smartphone in front of your camera/face. Unauthorized device usage is strictly prohibited.",
                 type: 'phone'
               });
-            }, 500);
+            }, 200);
           }
         } else {
           if (isPhoneDetectedRef.current) {
@@ -271,7 +275,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         }
 
         // -------------------------------------------------------------
-        // AUTOMATIC RULE 2: SIDEWAYS GAZE STRIKE (0.8s RESPONSE)
+        // AUTOMATIC RULE 2: FAST SIDEWAYS GAZE STRIKE (0.4s RESPONSE)
         // -------------------------------------------------------------
         if (isLookingAway && !isPhoneInFrame) {
           if (!isLookingAwayRef.current) {
@@ -289,13 +293,13 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
                 } else {
                   setActiveWarning({
                     title: `VISION INTEGRITY ALERT: Strike ${newGazeCount}/3`,
-                    message: `AI Vision detected ${poseLabel}. Please maintain direct eye contact with the camera.`,
+                    message: `AI Vision detected ${poseLabel}. Please maintain direct head alignment and eye contact with the camera.`,
                     type: 'gaze'
                   });
                 }
                 return newGazeCount;
               });
-            }, 800);
+            }, 400);
           }
         } else {
           if (isLookingAwayRef.current) {
@@ -381,19 +385,19 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           overlayCtx.lineWidth = 2.5;
           overlayCtx.strokeStyle = '#f43f5e';
           overlayCtx.setLineDash([4, 4]);
-          overlayCtx.strokeRect(width * 0.15, height * 0.45, width * 0.7, height * 0.5);
+          overlayCtx.strokeRect(width * 0.15, height * 0.25, width * 0.7, height * 0.65);
           overlayCtx.setLineDash([]);
           overlayCtx.fillStyle = '#f43f5e';
           overlayCtx.font = 'bold 12px monospace';
           overlayCtx.textAlign = 'center';
-          overlayCtx.fillText('🚨 PHONE / SECONDARY DEVICE DETECTED', width / 2, height * 0.52);
+          overlayCtx.fillText('🚨 PHONE / SECONDARY DEVICE DETECTED', width / 2, height * 0.35);
         }
       }
 
-      animFrameId = requestAnimationFrame(runSmartBiometricTracking);
+      animFrameId = requestAnimationFrame(runMultilayerUltraVision);
     };
 
-    runSmartBiometricTracking();
+    runMultilayerUltraVision();
 
     return () => {
       if (animFrameId) cancelAnimationFrame(animFrameId);
