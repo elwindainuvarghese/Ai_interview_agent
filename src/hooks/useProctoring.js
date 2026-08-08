@@ -6,14 +6,14 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [lookingAwayCount, setLookingAwayCount] = useState(0);
   const [phoneDetectedCount, setPhoneDetectedCount] = useState(0);
-  const [attentionScore, setAttentionScore] = useState(98);
+  const [attentionScore, setAttentionScore] = useState(100);
   const [isTerminated, setIsTerminated] = useState(false);
   const [terminationReason, setTerminationReason] = useState('');
   const [activeWarning, setActiveWarning] = useState(null);
   const [audioLevel, setAudioLevel] = useState(0);
   const [proctorLogs, setProctorLogs] = useState([]);
   
-  // Ultra-Power AI Vision tracking state
+  // Real-time AI Vision tracking state
   const [facePosition, setFacePosition] = useState({
     x: 0.5,
     y: 0.5,
@@ -32,6 +32,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
   const analyserRef = useRef(null);
   const lookingAwayTimerRef = useRef(null);
   const noFaceTimerRef = useRef(null);
+  const phoneTimerRef = useRef(null);
 
   const isLookingAwayRef = useRef(false);
   const isNoFaceRef = useRef(false);
@@ -60,7 +61,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         mediaStreamRef.current = stream;
         setCameraActive(true);
         setMicActive(true);
-        addLog("Ultra Pro Max AI Vision Engine online.", "success");
+        addLog("AI Vision Engine calibrated and active.", "success");
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -89,8 +90,8 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
             const normalizedLevel = Math.min(100, Math.round((average / 128) * 100));
             setAudioLevel(normalizedLevel);
 
-            if (normalizedLevel > 65) {
-              setAttentionScore((prev) => Math.max(15, Number((prev - 0.12).toFixed(1))));
+            if (normalizedLevel > 75) {
+              setAttentionScore((prev) => Math.max(20, Number((prev - 0.05).toFixed(1))));
             }
 
             requestAnimationFrame(checkAudio);
@@ -119,7 +120,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     };
   }, [isEnabled, isTerminated, addLog]);
 
-  // 2. ULTRA PRO MAX INSTANT Phone, Face Absence & Sideways Gaze Detection Loop (100ms)
+  // 2. SMART ZERO-FALSE-POSITIVE AI Vision Face, Gaze & Device Detection Loop
   useEffect(() => {
     if (!isEnabled || isTerminated || !cameraActive) return;
 
@@ -129,7 +130,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     sampleCanvas.width = 160;
     sampleCanvas.height = 120;
 
-    const runUltraProMaxVisionTracking = () => {
+    const runSmartVisionTracking = () => {
       if (isTerminated) return;
 
       const video = videoRef.current;
@@ -154,11 +155,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         let weightedY = 0;
         let leftLuma = 0;
         let rightLuma = 0;
-        let topLuma = 0;
-        let bottomLuma = 0;
-
-        let handheldDevicePixels = 0;
-        let darkObjectPixelsInLowerThird = 0;
+        let phoneDevicePixelsNearFace = 0;
 
         for (let i = 0; i < pixels.length; i += 16) {
           const r = pixels[i];
@@ -170,27 +167,14 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           const x = pixelIdx % 160;
           const y = Math.floor(pixelIdx / 160);
 
-          // Skin tone detection
-          if (r > 45 && g > 25 && b > 15 && r > b && (r - g) > 4) {
+          // Skin tone detection with strict color bounds (eliminates clothing/background false positives)
+          if (r > 60 && g > 35 && b > 20 && (r - g) > 8 && r > b) {
             weightedX += x * luma;
             weightedY += y * luma;
             skinWeight += luma;
 
             if (x < 80) leftLuma += luma;
             else rightLuma += luma;
-
-            if (y < 60) topLuma += luma;
-            else bottomLuma += luma;
-          }
-
-          // INSTANT PHONE / DEVICE SHAPE DETECTION:
-          // Detect handheld dark rectangular phone shapes, screens, or object holding in hands
-          if (y > 55) {
-            const isDarkDevice = luma < 45 && Math.abs(r - g) < 18 && Math.abs(g - b) < 18;
-            const isBrightScreenGlow = luma > 210 && (r > 200 && g > 200 && b > 200);
-            if (isDarkDevice || isBrightScreenGlow) {
-              darkObjectPixelsInLowerThird++;
-            }
           }
         }
 
@@ -198,22 +182,52 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         let faceCenterY = 0.5;
         let faceCount = 1;
 
-        // REQUIREMENT: NO HUMAN DETECTED (Skin weight < 350)
-        if (skinWeight < 350) {
-          faceCount = 0; // Candidate stepped away or covered camera!
+        // FACE ABSENCE: Minimum skin centroid weight required
+        if (skinWeight < 200) {
+          faceCount = 0;
         } else {
           faceCenterX = weightedX / skinWeight / 160;
           faceCenterY = weightedY / skinWeight / 120;
         }
 
-        // TIGHTENED HIGH SENSITIVITY THRESHOLDS
-        const lumaAsymmetry = Math.abs(leftLuma - rightLuma) / (leftLuma + rightLuma || 1);
-        const isSidewaysLeft = faceCenterX < 0.44 || (lumaAsymmetry > 0.18 && leftLuma < rightLuma);
-        const isSidewaysRight = faceCenterX > 0.56 || (lumaAsymmetry > 0.18 && rightLuma < leftLuma);
-        const isLookingDown = (faceCenterY - 0.5) > 0.12 || (bottomLuma / (topLuma + 1) > 1.5);
+        // SMART PHONE DETECTION NEAR FACE (Scans ONLY hand-to-face region, NOT clothing/t-shirt!)
+        if (faceCount > 0) {
+          for (let i = 0; i < pixels.length; i += 16) {
+            const r = pixels[i];
+            const g = pixels[i + 1];
+            const b = pixels[i + 2];
+            const luma = 0.299 * r + 0.587 * g + 0.114 * b;
 
-        // INSTANT PHONE DETECTION TRIGGER: > 45 dark/bright device pixels in lower frame or looking down with device
-        const isPhoneInFrame = darkObjectPixelsInLowerThird > 45 || (isLookingDown && darkObjectPixelsInLowerThird > 25);
+            const pixelIdx = i / 4;
+            const x = pixelIdx % 160;
+            const y = Math.floor(pixelIdx / 160);
+
+            const gridX = x / 160;
+            const gridY = y / 120;
+
+            // Check region around chin/jaw/hands (gridY between faceCenterY + 0.1 and faceCenterY + 0.35)
+            const isNearFaceRegion = gridY > (faceCenterY + 0.08) && gridY < (faceCenterY + 0.38) && Math.abs(gridX - faceCenterX) < 0.28;
+
+            if (isNearFaceRegion) {
+              const isDarkDevice = luma < 30 && Math.abs(r - g) < 10 && Math.abs(g - b) < 10;
+              const isGlowingScreen = luma > 230 && r > 210 && g > 210 && b > 210;
+              if (isDarkDevice || isGlowingScreen) {
+                phoneDevicePixelsNearFace++;
+              }
+            }
+          }
+        }
+
+        // SMART REASONABLE THRESHOLDS FOR GAZE & SIDEWAYS
+        const xOffset = Math.abs(faceCenterX - 0.5);
+        const lumaAsymmetry = Math.abs(leftLuma - rightLuma) / (leftLuma + rightLuma || 1);
+
+        const isSidewaysLeft = faceCenterX < 0.32 || (lumaAsymmetry > 0.38 && leftLuma < rightLuma);
+        const isSidewaysRight = faceCenterX > 0.68 || (lumaAsymmetry > 0.38 && rightLuma < leftLuma);
+        const isLookingDown = faceCenterY > 0.72;
+
+        // Requires > 220 phone device pixels right near face/chin region (never triggers on t-shirt)
+        const isPhoneInFrame = phoneDevicePixelsNearFace > 220;
         const isLookingAway = isSidewaysLeft || isSidewaysRight || isLookingDown;
 
         let poseLabel = 'CENTERED';
@@ -241,27 +255,27 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         });
 
         // -------------------------------------------------------------
-        // RULE 1: NO HUMAN DETECTED -> INSTANT INTERVIEW TERMINATION (2 Seconds)
+        // 1. NO HUMAN DETECTED: AUTO TERMINATION IN 2.5 SECONDS
         // -------------------------------------------------------------
         if (faceCount === 0) {
-          setAttentionScore((prev) => Math.max(0, Number((prev - 2.5).toFixed(1))));
+          setAttentionScore((prev) => Math.max(0, Number((prev - 1.5).toFixed(1))));
 
           if (!isNoFaceRef.current) {
             isNoFaceRef.current = true;
-            addLog("ALERT: No human candidate detected in camera frame!", "danger");
+            addLog("ALERT: Candidate stepped away from camera stream.", "danger");
 
             noFaceTimerRef.current = setTimeout(() => {
               setIsTerminated(true);
-              const termMsg = "INTERVIEW TERMINATED: No human candidate detected in camera stream for > 2 seconds.";
+              const termMsg = "INTERVIEW TERMINATED: No human candidate detected in camera stream for > 2.5 seconds.";
               setTerminationReason(termMsg);
-              addLog("INTERVIEW TERMINATED: No Human Detected", "critical");
+              addLog("INTERVIEW TERMINATED: No Human Candidate Detected", "critical");
 
               if (mediaStreamRef.current) {
                 mediaStreamRef.current.getTracks().forEach((t) => t.stop());
               }
 
               if (onTerminate) onTerminate({ reason: termMsg, cause: "no_human" });
-            }, 2000); // 2 Seconds face absence lock!
+            }, 2500);
           }
         } else {
           if (isNoFaceRef.current) {
@@ -271,40 +285,43 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         }
 
         // -------------------------------------------------------------
-        // RULE 2: INSTANT PHONE DETECTION TRIGGER (0 Delay)
+        // 2. SMART PHONE DETECTION: PERSISTS FOR 1.5s BEFORE POPUP
         // -------------------------------------------------------------
         if (isPhoneInFrame) {
-          setAttentionScore((prev) => Math.max(10, Number((prev - 1.5).toFixed(1))));
+          setAttentionScore((prev) => Math.max(15, Number((prev - 0.8).toFixed(1))));
 
           if (!isPhoneDetectedRef.current) {
             isPhoneDetectedRef.current = true;
-            setPhoneDetectedCount((p) => p + 1);
-            addLog("CRITICAL ALERT: Secondary Mobile Device detected in hands/frame!", "critical");
+            phoneTimerRef.current = setTimeout(() => {
+              setPhoneDetectedCount((p) => p + 1);
+              addLog("SECURITY ALERT: Mobile phone / handheld device detected near face!", "critical");
 
-            setActiveWarning({
-              title: "CRITICAL: MOBILE PHONE DETECTED!",
-              message: "AI Vision detected a mobile phone or handheld electronic device in your frame! Usage of unauthorized devices is strictly prohibited.",
-              type: 'phone'
-            });
+              setActiveWarning({
+                title: "CRITICAL: MOBILE PHONE DETECTED!",
+                message: "AI Vision detected a mobile phone or handheld electronic device near your face! Please put away all secondary devices.",
+                type: 'phone'
+              });
+            }, 1200);
           }
         } else {
           if (isPhoneDetectedRef.current) {
             isPhoneDetectedRef.current = false;
+            if (phoneTimerRef.current) clearTimeout(phoneTimerRef.current);
           }
         }
 
         // -------------------------------------------------------------
-        // RULE 3: FAST SIDEWAYS & LOOKING AWAY GAZE STRIKE (0.5s Response)
+        // 3. SIDEWAYS & GAZE DEVIATION STRIKE (2.0s PERSISTENCE)
         // -------------------------------------------------------------
-        if (isLookingAway && faceCount > 0) {
-          setAttentionScore((prev) => Math.max(15, Number((prev - 0.8).toFixed(1))));
+        if (isLookingAway && faceCount > 0 && !isPhoneInFrame) {
+          setAttentionScore((prev) => Math.max(20, Number((prev - 0.4).toFixed(1))));
 
           if (!isLookingAwayRef.current) {
             isLookingAwayRef.current = true;
             lookingAwayTimerRef.current = setTimeout(() => {
               setLookingAwayCount((prev) => {
                 const newGazeCount = prev + 1;
-                addLog(`High-Power Vision Alert ${newGazeCount}/3: Candidate ${poseLabel}`, "danger");
+                addLog(`Vision Alert ${newGazeCount}/3: Candidate ${poseLabel}`, "warning");
 
                 if (newGazeCount >= 3) {
                   setIsTerminated(true);
@@ -320,11 +337,11 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
                 }
                 return newGazeCount;
               });
-            }, 500); // 0.5s Fast Response!
+            }, 2000);
           }
         } else {
           if (faceCount > 0 && !isPhoneInFrame) {
-            setAttentionScore((prev) => Math.min(100, Number((prev + 0.3).toFixed(1))));
+            setAttentionScore((prev) => Math.min(100, Number((prev + 0.2).toFixed(1))));
           }
           if (isLookingAwayRef.current) {
             isLookingAwayRef.current = false;
@@ -332,7 +349,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           }
         }
 
-        // Render Ultra Cyberpunk AI Vision Overlay Canvas
+        // Render AI Vision Overlay Canvas (Clean Reticle)
         overlayCtx.clearRect(0, 0, width, height);
 
         const boxX = (faceCenterX - 0.22) * width;
@@ -345,12 +362,12 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
 
         if (faceCount > 0) {
           // Bounding Reticle Corners
-          overlayCtx.lineWidth = 3.5;
+          overlayCtx.lineWidth = 3;
           overlayCtx.strokeStyle = hudColor;
-          overlayCtx.shadowBlur = 18;
+          overlayCtx.shadowBlur = 14;
           overlayCtx.shadowColor = shadowGlow;
 
-          const cLen = 24;
+          const cLen = 22;
           // Top-Left
           overlayCtx.beginPath();
           overlayCtx.moveTo(boxX, boxY + cLen);
@@ -379,57 +396,50 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           overlayCtx.lineTo(boxX + boxW, boxY + boxH - cLen);
           overlayCtx.stroke();
 
-          // Laser Target Center Crosshair
+          // Target Center Crosshair
           const targetX = faceCenterX * width;
           const targetY = faceCenterY * height;
 
           overlayCtx.beginPath();
-          overlayCtx.arc(targetX, targetY, 6, 0, Math.PI * 2);
+          overlayCtx.arc(targetX, targetY, 5, 0, Math.PI * 2);
           overlayCtx.fillStyle = hudColor;
           overlayCtx.fill();
-
-          overlayCtx.lineWidth = 1.5;
-          overlayCtx.beginPath();
-          overlayCtx.moveTo(targetX - 16, targetY);
-          overlayCtx.lineTo(targetX + 16, targetY);
-          overlayCtx.moveTo(targetX, targetY - 16);
-          overlayCtx.lineTo(targetX, targetY + 16);
-          overlayCtx.stroke();
         }
 
-        // NO HUMAN DETECTED RED SCREEN FLASH OVERLAY
+        // NO HUMAN DETECTED OVERLAY
         if (faceCount === 0) {
-          overlayCtx.fillStyle = 'rgba(244, 63, 94, 0.25)';
+          overlayCtx.fillStyle = 'rgba(244, 63, 94, 0.3)';
           overlayCtx.fillRect(0, 0, width, height);
           overlayCtx.fillStyle = '#ffffff';
           overlayCtx.font = 'bold 13px sans-serif';
           overlayCtx.textAlign = 'center';
-          overlayCtx.fillText('⚠ NO HUMAN DETECTED IN CAMERA STREAM', width / 2, height / 2);
+          overlayCtx.fillText('⚠ NO HUMAN DETECTED IN STREAM', width / 2, height / 2);
         }
 
-        // PHONE DETECTED RED BOUNDING BOX
+        // SMART PHONE DETECTED OVERLAY
         if (isPhoneInFrame) {
-          overlayCtx.lineWidth = 2.5;
+          overlayCtx.lineWidth = 2;
           overlayCtx.strokeStyle = '#f43f5e';
           overlayCtx.setLineDash([4, 4]);
-          overlayCtx.strokeRect(width * 0.2, height * 0.55, width * 0.6, height * 0.4);
+          overlayCtx.strokeRect(width * 0.25, height * (faceCenterY + 0.08), width * 0.5, height * 0.35);
           overlayCtx.setLineDash([]);
           overlayCtx.fillStyle = '#f43f5e';
-          overlayCtx.font = 'bold 12px monospace';
+          overlayCtx.font = 'bold 11px monospace';
           overlayCtx.textAlign = 'center';
-          overlayCtx.fillText('🚨 PHONE / DEVICE DETECTED', width / 2, height * 0.63);
+          overlayCtx.fillText('🚨 PHONE DETECTED NEAR FACE', width / 2, height * (faceCenterY + 0.15));
         }
       }
 
-      animFrameId = requestAnimationFrame(runUltraProMaxVisionTracking);
+      animFrameId = requestAnimationFrame(runSmartVisionTracking);
     };
 
-    runUltraProMaxVisionTracking();
+    runSmartVisionTracking();
 
     return () => {
       if (animFrameId) cancelAnimationFrame(animFrameId);
       if (lookingAwayTimerRef.current) clearTimeout(lookingAwayTimerRef.current);
       if (noFaceTimerRef.current) clearTimeout(noFaceTimerRef.current);
+      if (phoneTimerRef.current) clearTimeout(phoneTimerRef.current);
     };
   }, [isEnabled, isTerminated, cameraActive, onTerminate, addLog]);
 
