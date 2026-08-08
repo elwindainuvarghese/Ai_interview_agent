@@ -1,0 +1,43 @@
+/* Orb Container */
+.orb-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  height: 400px;
+}
+
+#ai-orb {
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 0 100px var(--cyan-glow);
+  background: transparent;
+}
+
+.glow-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 243, 255, 0.3);
+  z-index: 1;
+  animation: pulse 3s infinite ease-in-out;
+}
+
+#start-btn {
+  margin-top: 2rem;
+  z-index: 3;
+}
+
+@keyframes pulse {
+  0% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.5; }
+  50% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; box-shadow: 0 0 40px var(--cyan-glow); }
+  100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.5; }
+}
