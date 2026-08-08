@@ -48,7 +48,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
       if (err.code === 'auth/popup-closed-by-user') {
         setError("Sign-in process was canceled before completion.");
       } else if (err.code === 'auth/invalid-api-key' || err.message?.includes('api-key')) {
-        setError("Firebase API key configuration notice. Please ensure Google Sign-In is enabled in Firebase Console.");
+        setError("Firebase configuration notice. Please enable Google Sign-In in Firebase Console.");
       } else {
         setError(err.message || "Failed to authenticate with Google. Please try again.");
       }
@@ -59,132 +59,260 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/85 backdrop-blur-xl">
+      <div 
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          backgroundColor: 'rgba(3, 2, 9, 0.88)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
+        }}
+      >
         {/* Ambient Glowing Purple Mesh Aura */}
-        <div className="absolute w-[550px] h-[550px] bg-gradient-to-tr from-purple-600/30 via-indigo-600/20 to-fuchsia-600/20 rounded-full blur-[140px] pointer-events-none animate-pulse-glow" />
+        <div 
+          style={{
+            position: 'absolute',
+            width: '650px',
+            height: '650px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(168, 85, 247, 0.28) 0%, rgba(99, 102, 241, 0.15) 45%, transparent 70%)',
+            filter: 'blur(90px)',
+            pointerEvents: 'none'
+          }}
+        />
 
         {/* Modal Window Container */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 15 }}
+          initial={{ opacity: 0, scale: 0.92, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="relative w-full max-w-[500px] overflow-hidden bg-[#090714]/95 backdrop-blur-3xl border border-purple-500/30 rounded-3xl shadow-[0_0_60px_rgba(147,51,234,0.25)] p-7 sm:p-9"
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            position: 'relative',
+            width: '100%',
+            maxWidth: '540px',
+            backgroundColor: 'rgba(12, 9, 26, 0.96)',
+            backdropFilter: 'blur(30px)',
+            WebkitBackdropFilter: 'blur(30px)',
+            border: '1px solid rgba(168, 85, 247, 0.35)',
+            borderRadius: '28px',
+            boxShadow: '0 30px 100px rgba(0, 0, 0, 0.85), 0 0 60px rgba(147, 51, 234, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.2)',
+            padding: '2.5rem 2.25rem',
+            boxSizing: 'border-box'
+          }}
         >
           {/* Close Button */}
           {onClose && (
             <button
               onClick={onClose}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white bg-slate-900/60 hover:bg-slate-800 rounded-full border border-white/10 transition-all cursor-pointer"
+              style={{
+                position: 'absolute',
+                top: '1.25rem',
+                right: '1.25rem',
+                padding: '0.5rem',
+                color: '#94a3b8',
+                backgroundColor: 'rgba(30, 27, 54, 0.6)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease'
+              }}
               title="Close modal"
             >
-              <X className="w-4 h-4" />
+              <X style={{ width: '16px', height: '16px' }} />
             </button>
           )}
 
-          {/* Top Decorative Pulsing Seed-of-Life Icon */}
-          <div className="flex justify-center mb-5">
-            <div className="relative p-4 bg-gradient-to-tr from-purple-600/30 via-indigo-500/20 to-purple-400/10 border border-purple-500/40 rounded-2xl shadow-lg shadow-purple-500/20">
+          {/* Top Seed-of-Life Micro-Animation Badge */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+            <div 
+              style={{
+                position: 'relative',
+                padding: '1.1rem',
+                background: 'radial-gradient(circle, rgba(168, 85, 247, 0.25) 0%, rgba(99, 102, 241, 0.1) 100%)',
+                border: '1px solid rgba(168, 85, 247, 0.4)',
+                borderRadius: '22px',
+                boxShadow: '0 0 30px rgba(168, 85, 247, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.3)'
+              }}
+            >
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 border border-purple-400/30 rounded-2xl"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  border: '1px dashed rgba(192, 132, 252, 0.4)',
+                  borderRadius: '22px'
+                }}
               />
-              <Sparkles className="w-8 h-8 text-purple-300 animate-pulse" />
+              <Sparkles style={{ width: '32px', height: '32px', color: '#e9d5ff' }} />
             </div>
           </div>
 
-          {/* Title & Subtitle */}
-          <div className="text-center space-y-2 mb-7">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-purple-100 to-purple-300 bg-clip-text text-transparent">
+          {/* Header Title & Subtitle */}
+          <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+            <h2 
+              style={{
+                fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif",
+                fontSize: '1.85rem',
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                margin: 0,
+                marginBottom: '0.5rem',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f3e8ff 50%, #d8b4fe 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
               Access AI Interview Portal
             </h2>
-            <p className="text-xs sm:text-sm text-slate-300/80 leading-relaxed max-w-sm mx-auto">
-              Select your role and authenticate with Google to access your dashboard
+            <p style={{ margin: 0, fontSize: '0.875rem', color: 'rgba(226, 232, 240, 0.75)', lineHeight: 1.5 }}>
+              Select your role and authenticate with Google to access your evaluation workspace
             </p>
           </div>
 
-          {/* Role Toggle / Segmented Control */}
-          <div className="p-1.5 mb-5 bg-slate-950/80 border border-white/10 rounded-2xl grid grid-cols-2 gap-1.5 relative">
+          {/* Segmented Control Role Selector */}
+          <div 
+            style={{
+              padding: '6px',
+              marginBottom: '1.5rem',
+              backgroundColor: 'rgba(15, 12, 33, 0.9)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '18px',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '6px'
+            }}
+          >
             <button
               type="button"
               onClick={() => setSelectedRole('interviewer')}
-              className={`relative z-10 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer ${
-                selectedRole === 'interviewer'
-                  ? 'text-white shadow-lg'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              style={{
+                position: 'relative',
+                padding: '0.75rem 1rem',
+                borderRadius: '14px',
+                fontSize: '0.825rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: 'none',
+                color: selectedRole === 'interviewer' ? '#ffffff' : '#94a3b8',
+                background: selectedRole === 'interviewer' 
+                  ? 'linear-gradient(135deg, #9333ea 0%, #6366f1 100%)' 
+                  : 'transparent',
+                boxShadow: selectedRole === 'interviewer' 
+                  ? '0 6px 20px rgba(147, 51, 234, 0.4)' 
+                  : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.25s ease'
+              }}
             >
-              {selectedRole === 'interviewer' && (
-                <motion.div
-                  layoutId="roleTabGlow"
-                  className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl shadow-md shadow-purple-500/30"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-2">
-                <UserCheck className="w-4 h-4" />
-                Interviewer / Candidate
-              </span>
+              <UserCheck style={{ width: '16px', height: '16px' }} />
+              Interviewer / Candidate
             </button>
 
             <button
               type="button"
               onClick={() => setSelectedRole('admin')}
-              className={`relative z-10 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer ${
-                selectedRole === 'admin'
-                  ? 'text-white shadow-lg'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              style={{
+                position: 'relative',
+                padding: '0.75rem 1rem',
+                borderRadius: '14px',
+                fontSize: '0.825rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: 'none',
+                color: selectedRole === 'admin' ? '#ffffff' : '#94a3b8',
+                background: selectedRole === 'admin' 
+                  ? 'linear-gradient(135deg, #9333ea 0%, #6366f1 100%)' 
+                  : 'transparent',
+                boxShadow: selectedRole === 'admin' 
+                  ? '0 6px 20px rgba(147, 51, 234, 0.4)' 
+                  : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.25s ease'
+              }}
             >
-              {selectedRole === 'admin' && (
-                <motion.div
-                  layoutId="roleTabGlow"
-                  className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl shadow-md shadow-purple-500/30"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                Admin Access
-              </span>
+              <Shield style={{ width: '16px', height: '16px' }} />
+              Admin Access
             </button>
           </div>
 
-          {/* Role Indicator Card */}
+          {/* Dynamic Role Indicator Card */}
           <motion.div
             key={selectedRole}
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 mb-6 bg-purple-950/40 border border-purple-500/30 rounded-2xl flex items-start gap-3 text-xs text-purple-200 leading-relaxed"
+            style={{
+              padding: '1rem 1.15rem',
+              marginBottom: '1.5rem',
+              backgroundColor: 'rgba(147, 51, 234, 0.1)',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              borderRadius: '18px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              fontSize: '0.8rem',
+              color: '#e9d5ff',
+              lineHeight: 1.55
+            }}
           >
             {selectedRole === 'interviewer' ? (
               <>
-                <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                <CheckCircle2 style={{ width: '18px', height: '18px', color: '#c084fc', flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                  <strong className="text-white block font-semibold mb-0.5">Interviewer Portal</strong>
-                  <span>Conduct multi-turn technical assessments, monitor candidates, and view structured evaluations.</span>
+                  <strong style={{ color: '#ffffff', display: 'block', fontWeight: 700, marginBottom: '2px' }}>
+                    Interviewer Portal
+                  </strong>
+                  <span>Conduct multi-turn AI technical assessments, monitor live responses, and evaluate cohort candidates.</span>
                 </div>
               </>
             ) : (
               <>
-                <Lock className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                <Lock style={{ width: '18px', height: '18px', color: '#818cf8', flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                  <strong className="text-white block font-semibold mb-0.5">Admin Dashboard</strong>
-                  <span>Full platform governance, candidate metrics, curriculum updates, and system logs.</span>
+                  <strong style={{ color: '#ffffff', display: 'block', fontWeight: 700, marginBottom: '2px' }}>
+                    Admin Dashboard
+                  </strong>
+                  <span>Full platform governance, candidate evaluation analytics, curriculum edits, and system metrics.</span>
                 </div>
               </>
             )}
           </motion.div>
 
-          {/* Error Banner */}
+          {/* Formatted Error Banner */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3.5 mb-5 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-xs text-rose-300 flex items-start gap-2.5 leading-relaxed"
+              style={{
+                padding: '0.85rem 1rem',
+                marginBottom: '1.25rem',
+                backgroundColor: 'rgba(244, 63, 94, 0.12)',
+                border: '1px solid rgba(244, 63, 94, 0.35)',
+                borderRadius: '16px',
+                color: '#fca5a5',
+                fontSize: '0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
             >
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <AlertCircle style={{ width: '18px', height: '18px', color: '#f43f5e', flexShrink: 0 }} />
               <span>{error}</span>
             </motion.div>
           )}
@@ -195,47 +323,85 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
             whileTap={{ scale: 0.98 }}
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm rounded-2xl shadow-[0_0_35px_rgba(168,85,247,0.35)] border border-purple-400/40 transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{
+              width: '100%',
+              padding: '1.1rem 1.5rem',
+              background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              borderRadius: '18px',
+              color: '#ffffff',
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? 0.7 : 1,
+              boxShadow: '0 12px 35px rgba(168, 85, 247, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              transition: 'all 0.25s ease'
+            }}
           >
             {isLoading ? (
-              <div className="flex items-center gap-2.5">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '18px', height: '18px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#ffffff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
                 <span>Authenticating with Firebase...</span>
               </div>
             ) : (
               <>
-                {/* SVG Google Logo */}
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#EA4335"
-                    d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"
-                  />
-                  <path
-                    fill="#4285F4"
-                    d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15s.7 5.3 1.9 7.7l3.7-2.9c-.8-.7-1.4-1.7-1.8-2.8z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"
-                  />
-                </svg>
+                {/* SVG Google Logo inside white background circle */}
+                <div 
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    backgroundColor: '#ffffff',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  <svg style={{ width: '16px', height: '16px' }} viewBox="0 0 24 24">
+                    <path
+                      fill="#EA4335"
+                      d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"
+                    />
+                    <path
+                      fill="#4285F4"
+                      d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15s.7 5.3 1.9 7.7l3.7-2.9c-.8-.7-1.4-1.7-1.8-2.8z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"
+                    />
+                  </svg>
+                </div>
                 <span>Continue with Google</span>
-                <ArrowRight className="w-4 h-4 ml-1 opacity-80" />
+                <ArrowRight style={{ width: '18px', height: '18px', opacity: 0.8 }} />
               </>
             )}
           </motion.button>
 
           {/* Dismiss Option */}
           {onClose && (
-            <div className="mt-5 text-center">
+            <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
               <button
                 type="button"
                 onClick={onClose}
-                className="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer font-medium"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '0.8rem',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  transition: 'color 0.2s ease'
+                }}
               >
                 Dismiss & Browse Preview Mode
               </button>
