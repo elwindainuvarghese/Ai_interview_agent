@@ -117,7 +117,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     };
   }, [isEnabled, isTerminated, addLog]);
 
-  // 2. BIOMETRIC PRECISION VISION ENGINE (ZERO FALSE POSITIVES ON BACKGROUND TVS / DOORS)
+  // 2. REAL-TIME GAZE & DYNAMIC ATTENTION SCORE CALCULATOR
   useEffect(() => {
     if (!isEnabled || isTerminated || !cameraActive) return;
 
@@ -174,12 +174,10 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
             skinPixels++;
           }
 
-          // PHONE DETECTOR: Only triggers if dark device pixels (luma < 30) are IMMEDIATELY ADJACENT to human hand/skin pixels!
-          // This completely ignores background TVs, wall monitors, and furniture that have zero touching skin pixels!
+          // PHONE DETECTOR: Triggers when dark device pixels (luma < 30) touch hand/skin pixels
           if (y > 20 && y < 110) {
             const isDarkDevice = (luma < 30 || (r < 30 && g < 30 && b < 30));
             if (isDarkDevice) {
-              // Check adjacent pixel (i + 16 or i - 16) for human hand skin
               const nextR = pixels[i + 16] || 0;
               const nextG = pixels[i + 17] || 0;
               const nextB = pixels[i + 18] || 0;
@@ -201,12 +199,11 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         }
 
         // ACCURATE GAZE THRESHOLDS FOR CANDIDATE FACING CAMERA
-        const isSidewaysLeft = faceCenterX < 0.40;
-        const isSidewaysRight = faceCenterX > 0.60;
+        const isSidewaysLeft = faceCenterX < 0.38;
+        const isSidewaysRight = faceCenterX > 0.62;
         const isLookingDown = faceCenterY > 0.62;
 
-        // Requires dark device held directly in hand
-        const isPhoneInFrame = handHeldDarkDevicePixels > 25;
+        const isPhoneInFrame = handHeldDarkDevicePixels > 30;
         const isLookingAway = isSidewaysLeft || isSidewaysRight || isLookingDown;
 
         let poseLabel = 'CENTERED';
@@ -235,7 +232,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         });
 
         // -------------------------------------------------------------
-        // DYNAMIC ATTENTION SCORE
+        // DYNAMIC ATTENTION SCORE (100% Facing Forward, Deducts Only When Away)
         // -------------------------------------------------------------
         let currentAttention = 100;
         if (isPhoneInFrame) {
@@ -244,9 +241,11 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           currentAttention = 55;
         } else if (isLookingDown) {
           currentAttention = 70;
+        } else {
+          // Candidate facing forward: 100% score (minor 5% deduction per tab switch)
+          currentAttention = Math.max(80, 100 - (tabSwitchCount * 5));
         }
 
-        currentAttention = Math.max(10, currentAttention - (tabSwitchCount * 25));
         setAttentionScore(currentAttention);
 
         // -------------------------------------------------------------
