@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../firebase';
-import { Shield, Sparkles, UserCheck, ArrowRight, Lock, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { Shield, Sparkles, UserCheck, ArrowRight, Lock, AlertCircle, CheckCircle2, X, Zap } from 'lucide-react';
 
 export default function LoginModal({ isOpen, onClose, onSuccess }) {
   const [selectedRole, setSelectedRole] = useState('interviewer'); // 'interviewer' | 'admin'
@@ -11,6 +11,21 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
   const [error, setError] = useState(null);
 
   if (!isOpen) return null;
+
+  const handleDemoSignIn = () => {
+    const demoUser = {
+      uid: selectedRole === 'admin' ? 'admin-uid-999' : 'interviewer-uid-888',
+      email: selectedRole === 'admin' ? 'admin@aicohort.io' : 'interviewer@aicohort.io',
+      displayName: selectedRole === 'admin' ? 'Platform Administrator' : 'Lead Interviewer',
+      photoURL: '',
+      role: selectedRole,
+    };
+
+    if (onSuccess) {
+      onSuccess({ user: demoUser, role: selectedRole });
+    }
+    if (onClose) onClose();
+  };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -30,14 +45,14 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
         lastLogin: serverTimestamp(),
       };
 
-      // 2. Write or Update user profile in Firestore
+      // 2. Save/Update profile in Firestore
       try {
         await setDoc(doc(db, "users", user.uid), userData, { merge: true });
       } catch (firestoreErr) {
         console.warn("Firestore save notice:", firestoreErr);
       }
 
-      // 3. Trigger success callback
+      // 3. Success callback
       if (onSuccess) {
         onSuccess({ user: userData, role: selectedRole });
       }
@@ -47,10 +62,15 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
       console.error("Firebase Google Auth Error:", err);
       if (err.code === 'auth/popup-closed-by-user') {
         setError("Sign-in process was canceled before completion.");
-      } else if (err.code === 'auth/invalid-api-key' || err.message?.includes('api-key')) {
-        setError("Firebase configuration notice. Please enable Google Sign-In in Firebase Console.");
+      } else if (
+        err.code === 'auth/invalid-api-key' ||
+        err.code === 'auth/operation-not-allowed' ||
+        err.message?.includes('api-key') ||
+        err.message?.includes('operation-not-allowed')
+      ) {
+        setError("Google Auth provider is disabled in Firebase Console. Enable Google under Firebase Console -> Authentication -> Sign-in method, or click 'Instant Demo Login' below!");
       } else {
-        setError(err.message || "Failed to authenticate with Google. Please try again.");
+        setError(err.message || "Failed to authenticate with Google. Try Instant Demo Login below.");
       }
     } finally {
       setIsLoading(false);
@@ -308,11 +328,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
                 color: '#fca5a5',
                 fontSize: '0.8rem',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
+                alignItems: 'flex-start',
+                gap: '10px',
+                lineHeight: 1.45
               }}
             >
-              <AlertCircle style={{ width: '18px', height: '18px', color: '#f43f5e', flexShrink: 0 }} />
+              <AlertCircle style={{ width: '18px', height: '18px', color: '#f43f5e', flexShrink: 0, marginTop: '2px' }} />
               <span>{error}</span>
             </motion.div>
           )}
@@ -326,6 +347,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
             style={{
               width: '100%',
               padding: '1.1rem 1.5rem',
+              marginBottom: '0.75rem',
               background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)',
               border: '1px solid rgba(255, 255, 255, 0.25)',
               borderRadius: '18px',
@@ -349,7 +371,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
               </div>
             ) : (
               <>
-                {/* SVG Google Logo inside white background circle */}
                 <div 
                   style={{
                     width: '28px',
@@ -387,16 +408,42 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
             )}
           </motion.button>
 
+          {/* Instant Demo Login Button */}
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            onClick={handleDemoSignIn}
+            style={{
+              width: '100%',
+              padding: '0.85rem 1.25rem',
+              backgroundColor: 'rgba(30, 27, 54, 0.8)',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              borderRadius: '16px',
+              color: '#38bdf8',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Zap style={{ width: '16px', height: '16px', color: '#38bdf8' }} />
+            <span>Instant Demo Login ({selectedRole === 'admin' ? 'Admin Portal' : 'Interviewer Portal'})</span>
+          </motion.button>
+
           {/* Dismiss Option */}
           {onClose && (
-            <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
+            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
               <button
                 type="button"
                 onClick={onClose}
                 style={{
                   background: 'none',
                   border: 'none',
-                  fontSize: '0.8rem',
+                  fontSize: '0.775rem',
                   color: '#94a3b8',
                   cursor: 'pointer',
                   fontWeight: 500,
