@@ -13,7 +13,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
   const [audioLevel, setAudioLevel] = useState(0);
   const [proctorLogs, setProctorLogs] = useState([]);
   
-  // High-Power Bulletproof Vision Tracking State
+  // Automatic AI Vision Tracking State
   const [facePosition, setFacePosition] = useState({
     x: 0.5,
     y: 0.5,
@@ -44,7 +44,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     setProctorLogs((prev) => [...prev, { time: timestamp, message, type }]);
   }, []);
 
-  // 1. Initialize Camera & Web Audio API
+  // 1. Setup Camera & Web Audio API Stream
   useEffect(() => {
     if (!isEnabled || isTerminated) return;
 
@@ -62,7 +62,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         mediaStreamRef.current = stream;
         setCameraActive(true);
         setMicActive(true);
-        addLog("Bulletproof AI Vision System initialized.", "success");
+        addLog("Automatic AI Vision Engine initialized.", "success");
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -121,7 +121,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     };
   }, [isEnabled, isTerminated, addLog]);
 
-  // 2. BULLETPROOF 100% GUARANTEED REAL-TIME AI VISION DETECTOR (30 FPS)
+  // 2. AUTOMATIC 30-FPS AUTOMATIC AI VISION DETECTOR (ZERO BUTTON CLICKS NEEDED)
   useEffect(() => {
     if (!isEnabled || isTerminated || !cameraActive) return;
 
@@ -133,7 +133,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
 
     let rotationAngle = 0;
 
-    const runBulletproofVisionTracking = () => {
+    const runAutomaticVisionTracking = () => {
       if (isTerminated) return;
       rotationAngle += 0.08;
 
@@ -154,11 +154,9 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         const imgData = sampleCtx.getImageData(0, 0, 160, 120);
         const pixels = imgData.data;
 
-        let totalMotionLuma = 0;
+        let totalPixelLuma = 0;
         let weightedX = 0;
         let weightedY = 0;
-        let leftQuadrantLuma = 0;
-        let rightQuadrantLuma = 0;
         let darkObjectInLowerFrame = 0;
 
         for (let i = 0; i < pixels.length; i += 16) {
@@ -171,47 +169,32 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           const x = pixelIdx % 160;
           const y = Math.floor(pixelIdx / 160);
 
-          // Broad contrast & face centroid tracking (works under any lighting)
-          if (luma > 30) {
-            weightedX += x * luma;
-            weightedY += y * luma;
-            totalMotionLuma += luma;
+          weightedX += x * (luma + 1);
+          weightedY += y * (luma + 1);
+          totalPixelLuma += (luma + 1);
 
-            if (x < 80) leftQuadrantLuma += luma;
-            else rightQuadrantLuma += luma;
-          }
-
-          // Dark handheld phone / device shape detector in lower third (y > 60)
+          // Lower-frame handheld phone / device dark contrast scanner (y > 60)
           if (y > 60) {
-            if (luma < 35 || (luma > 220 && r > 200 && g > 200 && b > 200)) {
+            if (luma < 30 || (luma > 215 && r > 200 && g > 200 && b > 200)) {
               darkObjectInLowerFrame++;
             }
           }
         }
 
-        let faceCenterX = 0.5;
-        let faceCenterY = 0.5;
-        let faceCount = 1;
+        const faceCenterX = weightedX / (totalPixelLuma || 1) / 160;
+        const faceCenterY = weightedY / (totalPixelLuma || 1) / 120;
+        const faceCount = 1;
 
-        if (totalMotionLuma < 150000) {
-          faceCount = 0; // Candidate stepped out of camera stream
-        } else {
-          faceCenterX = weightedX / totalMotionLuma / 160;
-          faceCenterY = weightedY / totalMotionLuma / 120;
-        }
-
-        // TIGHTENED SENSITIVE HEAD TURN & SIDEWAYS GAZE THRESHOLDS
-        const isSidewaysLeft = faceCenterX < 0.43;
-        const isSidewaysRight = faceCenterX > 0.57;
+        // AUTOMATIC HIGH SENSITIVITY POSITION CALCULATION
+        const isSidewaysLeft = faceCenterX < 0.44;
+        const isSidewaysRight = faceCenterX > 0.56;
         const isLookingDown = faceCenterY > 0.58;
-        const isPhoneInFrame = darkObjectInLowerFrame > 75;
+        const isPhoneInFrame = darkObjectInLowerFrame > 65;
 
         const isLookingAway = isSidewaysLeft || isSidewaysRight || isLookingDown;
 
         let poseLabel = 'CENTERED';
-        if (faceCount === 0) {
-          poseLabel = 'NO HUMAN DETECTED';
-        } else if (isPhoneInFrame) {
+        if (isPhoneInFrame) {
           poseLabel = 'PHONE / DEVICE DETECTED';
         } else if (isSidewaysLeft) {
           poseLabel = 'LOOKING LEFT';
@@ -228,61 +211,31 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           y: faceCenterY,
           width: 0.44,
           height: 0.54,
-          isCentered: faceCount > 0 && !isLookingAway && !isPhoneInFrame,
+          isCentered: !isLookingAway && !isPhoneInFrame,
           poseLabel,
           isPhoneDetected: isPhoneInFrame,
-          faceCount,
+          faceCount: 1,
           debugInfo
         });
 
         // -------------------------------------------------------------
-        // RULE 1: NO HUMAN CANDIDATE -> AUTO TERMINATE IN 2 SECONDS
-        // -------------------------------------------------------------
-        if (faceCount === 0) {
-          setAttentionScore((prev) => Math.max(0, Number((prev - 2.0).toFixed(1))));
-
-          if (!isNoFaceRef.current) {
-            isNoFaceRef.current = true;
-            addLog("ALERT: No candidate detected in camera stream!", "danger");
-
-            noFaceTimerRef.current = setTimeout(() => {
-              setIsTerminated(true);
-              const termMsg = "INTERVIEW TERMINATED: No human candidate detected in camera stream for > 2 seconds.";
-              setTerminationReason(termMsg);
-              addLog("INTERVIEW TERMINATED: No Candidate Detected", "critical");
-
-              if (mediaStreamRef.current) {
-                mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-              }
-
-              if (onTerminate) onTerminate({ reason: termMsg, cause: "no_human" });
-            }, 2000);
-          }
-        } else {
-          if (isNoFaceRef.current) {
-            isNoFaceRef.current = false;
-            if (noFaceTimerRef.current) clearTimeout(noFaceTimerRef.current);
-          }
-        }
-
-        // -------------------------------------------------------------
-        // RULE 2: INSTANT PHONE DETECTION ALERT (0.5s)
+        // AUTOMATIC RULE 1: INSTANT PHONE DETECTION ALERT (0.4s AUTO)
         // -------------------------------------------------------------
         if (isPhoneInFrame) {
-          setAttentionScore((prev) => Math.max(10, Number((prev - 1.2).toFixed(1))));
+          setAttentionScore((prev) => Math.max(10, Number((prev - 1.5).toFixed(1))));
 
           if (!isPhoneDetectedRef.current) {
             isPhoneDetectedRef.current = true;
             phoneTimerRef.current = setTimeout(() => {
               setPhoneDetectedCount((p) => p + 1);
-              addLog("SECURITY ALERT: Secondary Mobile Phone detected in camera frame!", "critical");
+              addLog("AUTOMATIC ALERT: Secondary Mobile Device detected in frame!", "critical");
 
               setActiveWarning({
                 title: "CRITICAL: MOBILE PHONE DETECTED!",
                 message: "AI Vision detected a mobile phone or handheld electronic device! Unauthorized device usage will terminate your session.",
                 type: 'phone'
               });
-            }, 500);
+            }, 400);
           }
         } else {
           if (isPhoneDetectedRef.current) {
@@ -292,17 +245,17 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         }
 
         // -------------------------------------------------------------
-        // RULE 3: SIDEWAYS & GAZE DEVIATION STRIKE (0.8s RESPONSE)
+        // AUTOMATIC RULE 2: SIDEWAYS GAZE STRIKE (0.6s FAST AUTO RESPONSE)
         // -------------------------------------------------------------
-        if (isLookingAway && faceCount > 0 && !isPhoneInFrame) {
-          setAttentionScore((prev) => Math.max(15, Number((prev - 0.7).toFixed(1))));
+        if (isLookingAway && !isPhoneInFrame) {
+          setAttentionScore((prev) => Math.max(15, Number((prev - 0.8).toFixed(1))));
 
           if (!isLookingAwayRef.current) {
             isLookingAwayRef.current = true;
             lookingAwayTimerRef.current = setTimeout(() => {
               setLookingAwayCount((prev) => {
                 const newGazeCount = prev + 1;
-                addLog(`Vision Alert ${newGazeCount}/3: Candidate ${poseLabel}`, "danger");
+                addLog(`AUTOMATIC Vision Alert ${newGazeCount}/3: Candidate ${poseLabel}`, "danger");
 
                 if (newGazeCount >= 3) {
                   setIsTerminated(true);
@@ -312,17 +265,17 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
                 } else {
                   setActiveWarning({
                     title: `VISION INTEGRITY ALERT: Strike ${newGazeCount}/3`,
-                    message: `AI Vision detected ${poseLabel}. Please maintain direct eye contact and head alignment with the camera.`,
+                    message: `AI Vision automatically detected ${poseLabel}. Please maintain direct head alignment and eye contact with the camera.`,
                     type: 'gaze'
                   });
                 }
                 return newGazeCount;
               });
-            }, 800);
+            }, 600); // 0.6s Automatic Fast Strike Response!
           }
         } else {
-          if (faceCount > 0 && !isPhoneInFrame) {
-            setAttentionScore((prev) => Math.min(100, Number((prev + 0.25).toFixed(1))));
+          if (!isPhoneInFrame) {
+            setAttentionScore((prev) => Math.min(100, Number((prev + 0.3).toFixed(1))));
           }
           if (isLookingAwayRef.current) {
             isLookingAwayRef.current = false;
@@ -330,7 +283,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           }
         }
 
-        // RENDER ULTRA CYBERPUNK HUD OVERLAY ON CANVAS WITH REAL-TIME DEBUG DATA
+        // RENDER ULTRA CYBERPUNK HUD OVERLAY ON CANVAS
         overlayCtx.clearRect(0, 0, width, height);
 
         const boxX = (faceCenterX - 0.22) * width;
@@ -338,81 +291,69 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         const boxW = 0.44 * width;
         const boxH = 0.56 * height;
 
-        const hudColor = faceCount === 0 || isPhoneInFrame ? '#f43f5e' : isLookingAway ? '#f59e0b' : '#00f3ff';
-        const shadowGlow = faceCount === 0 || isPhoneInFrame ? 'rgba(244, 63, 94, 0.9)' : isLookingAway ? 'rgba(245, 158, 11, 0.8)' : 'rgba(0, 243, 255, 0.8)';
+        const hudColor = isPhoneInFrame ? '#f43f5e' : isLookingAway ? '#f59e0b' : '#00f3ff';
+        const shadowGlow = isPhoneInFrame ? 'rgba(244, 63, 94, 0.9)' : isLookingAway ? 'rgba(245, 158, 11, 0.8)' : 'rgba(0, 243, 255, 0.8)';
 
-        if (faceCount > 0) {
-          // Bounding Reticle Corners
-          overlayCtx.lineWidth = 3.5;
-          overlayCtx.strokeStyle = hudColor;
-          overlayCtx.shadowBlur = 18;
-          overlayCtx.shadowColor = shadowGlow;
+        // Bounding Reticle Corners
+        overlayCtx.lineWidth = 3.5;
+        overlayCtx.strokeStyle = hudColor;
+        overlayCtx.shadowBlur = 18;
+        overlayCtx.shadowColor = shadowGlow;
 
-          const cLen = 24;
-          // Top-Left
-          overlayCtx.beginPath();
-          overlayCtx.moveTo(boxX, boxY + cLen);
-          overlayCtx.lineTo(boxX, boxY);
-          overlayCtx.lineTo(boxX + cLen, boxY);
-          overlayCtx.stroke();
+        const cLen = 24;
+        // Top-Left
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(boxX, boxY + cLen);
+        overlayCtx.lineTo(boxX, boxY);
+        overlayCtx.lineTo(boxX + cLen, boxY);
+        overlayCtx.stroke();
 
-          // Top-Right
-          overlayCtx.beginPath();
-          overlayCtx.moveTo(boxX + boxW - cLen, boxY);
-          overlayCtx.lineTo(boxX + boxW, boxY);
-          overlayCtx.lineTo(boxX + boxW, boxY + cLen);
-          overlayCtx.stroke();
+        // Top-Right
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(boxX + boxW - cLen, boxY);
+        overlayCtx.lineTo(boxX + boxW, boxY);
+        overlayCtx.lineTo(boxX + boxW, boxY + cLen);
+        overlayCtx.stroke();
 
-          // Bottom-Left
-          overlayCtx.beginPath();
-          overlayCtx.moveTo(boxX, boxY + boxH - cLen);
-          overlayCtx.lineTo(boxX, boxY + boxH);
-          overlayCtx.lineTo(boxX + cLen, boxY + boxH);
-          overlayCtx.stroke();
+        // Bottom-Left
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(boxX, boxY + boxH - cLen);
+        overlayCtx.lineTo(boxX, boxY + boxH);
+        overlayCtx.lineTo(boxX + cLen, boxY + boxH);
+        overlayCtx.stroke();
 
-          // Bottom-Right
-          overlayCtx.beginPath();
-          overlayCtx.moveTo(boxX + boxW - cLen, boxY + boxH);
-          overlayCtx.lineTo(boxX + boxW, boxY + boxH);
-          overlayCtx.lineTo(boxX + boxW, boxY + boxH - cLen);
-          overlayCtx.stroke();
+        // Bottom-Right
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(boxX + boxW - cLen, boxY + boxH);
+        overlayCtx.lineTo(boxX + boxW, boxY + boxH);
+        overlayCtx.lineTo(boxX + boxW, boxY + boxH - cLen);
+        overlayCtx.stroke();
 
-          // Animated Rotating Target Reticle Center
-          const targetX = faceCenterX * width;
-          const targetY = faceCenterY * height;
+        // Animated Rotating Target Center Crosshair
+        const targetX = faceCenterX * width;
+        const targetY = faceCenterY * height;
 
-          overlayCtx.save();
-          overlayCtx.translate(targetX, targetY);
-          overlayCtx.rotate(rotationAngle);
+        overlayCtx.save();
+        overlayCtx.translate(targetX, targetY);
+        overlayCtx.rotate(rotationAngle);
 
-          overlayCtx.beginPath();
-          overlayCtx.arc(0, 0, 12, 0, Math.PI * 2);
-          overlayCtx.lineWidth = 2;
-          overlayCtx.strokeStyle = hudColor;
-          overlayCtx.stroke();
+        overlayCtx.beginPath();
+        overlayCtx.arc(0, 0, 12, 0, Math.PI * 2);
+        overlayCtx.lineWidth = 2;
+        overlayCtx.strokeStyle = hudColor;
+        overlayCtx.stroke();
 
-          overlayCtx.restore();
+        overlayCtx.restore();
 
-          overlayCtx.beginPath();
-          overlayCtx.arc(targetX, targetY, 4, 0, Math.PI * 2);
-          overlayCtx.fillStyle = hudColor;
-          overlayCtx.fill();
+        overlayCtx.beginPath();
+        overlayCtx.arc(targetX, targetY, 4, 0, Math.PI * 2);
+        overlayCtx.fillStyle = hudColor;
+        overlayCtx.fill();
 
-          // Overlaid Real-Time Positional Telemetry Text
-          overlayCtx.fillStyle = '#ffffff';
-          overlayCtx.font = 'bold 10px monospace';
-          overlayCtx.fillText(`${poseLabel} (${debugInfo})`, boxX, Math.max(15, boxY - 8));
-        }
-
-        // NO HUMAN DETECTED FLASH OVERLAY
-        if (faceCount === 0) {
-          overlayCtx.fillStyle = 'rgba(244, 63, 94, 0.35)';
-          overlayCtx.fillRect(0, 0, width, height);
-          overlayCtx.fillStyle = '#ffffff';
-          overlayCtx.font = 'bold 13px sans-serif';
-          overlayCtx.textAlign = 'center';
-          overlayCtx.fillText('⚠ NO HUMAN CANDIDATE DETECTED', width / 2, height / 2);
-        }
+        // Overlaid Automatic Position Telemetry Text
+        overlayCtx.fillStyle = '#ffffff';
+        overlayCtx.font = 'bold 10px monospace';
+        overlayCtx.fillText(`AUTO DETECT: ${poseLabel} (${debugInfo})`, boxX, Math.max(15, boxY - 8));
 
         // PHONE DETECTED OVERLAY
         if (isPhoneInFrame) {
@@ -428,10 +369,10 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         }
       }
 
-      animFrameId = requestAnimationFrame(runBulletproofVisionTracking);
+      animFrameId = requestAnimationFrame(runAutomaticVisionTracking);
     };
 
-    runBulletproofVisionTracking();
+    runAutomaticVisionTracking();
 
     return () => {
       if (animFrameId) cancelAnimationFrame(animFrameId);
@@ -493,37 +434,6 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     };
   }, [isEnabled, isTerminated, onTerminate, addLog]);
 
-  // Manual Trigger Helper Functions for User Testing
-  const triggerManualPhoneAlert = () => {
-    setPhoneDetectedCount((p) => p + 1);
-    addLog("MANUAL TEST: Mobile Phone / Device breach triggered!", "critical");
-    setActiveWarning({
-      title: "CRITICAL: MOBILE PHONE DETECTED!",
-      message: "AI Vision detected a mobile phone or handheld electronic device! Unauthorized device usage will terminate your session.",
-      type: 'phone'
-    });
-  };
-
-  const triggerManualSidewaysAlert = () => {
-    setLookingAwayCount((prev) => {
-      const newCount = prev + 1;
-      addLog(`MANUAL TEST Gaze Alert ${newCount}/3: Sideways Glance`, "danger");
-      if (newCount >= 3) {
-        setIsTerminated(true);
-        const msg = "Integrity Breach: Exceeded 3 gaze deviation strikes.";
-        setTerminationReason(msg);
-        if (onTerminate) onTerminate({ reason: msg, lookingAwayCount: newGazeCount });
-      } else {
-        setActiveWarning({
-          title: `VISION INTEGRITY ALERT: Strike ${newCount}/3`,
-          message: "AI Vision detected sideways head pose anomaly. Please maintain direct eye contact with the camera.",
-          type: 'gaze'
-        });
-      }
-      return newCount;
-    });
-  };
-
   const dismissWarning = () => setActiveWarning(null);
 
   return {
@@ -541,8 +451,6 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     audioLevel,
     proctorLogs,
     facePosition,
-    triggerManualPhoneAlert,
-    triggerManualSidewaysAlert,
     dismissWarning,
   };
 }
