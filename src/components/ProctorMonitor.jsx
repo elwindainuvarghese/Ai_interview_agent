@@ -20,8 +20,6 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
     audioLevel,
     proctorLogs,
     facePosition,
-    triggerManualPhoneAlert,
-    triggerManualSidewaysAlert,
     dismissWarning
   } = proctorState;
 
@@ -53,7 +51,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
         }}
       >
         {/* Top Header Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', paddingBottom: '0.65rem', marginBottom: '0.75rem', borderBottom: '1px solid rgba(168, 85, 247, 0.2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.65rem', marginBottom: '0.75rem', borderBottom: '1px solid rgba(168, 85, 247, 0.2)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ padding: '6px', backgroundColor: 'rgba(168, 85, 247, 0.2)', borderRadius: '10px', border: '1px solid rgba(168, 85, 247, 0.4)' }}>
               <Shield style={{ width: '16px', height: '16px', color: '#c084fc' }} />
@@ -102,28 +100,10 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
           </div>
         </div>
 
-        {/* Live Test Trigger Control Buttons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '0.65rem' }}>
-          <button
-            onClick={triggerManualPhoneAlert}
-            style={{ padding: '6px', backgroundColor: 'rgba(244, 63, 94, 0.18)', border: '1px solid rgba(244, 63, 94, 0.4)', borderRadius: '10px', color: '#fca5a5', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyCenter: 'center', gap: '4px' }}
-          >
-            <Smartphone style={{ width: '12px', height: '12px' }} />
-            Test Phone 📱
-          </button>
-          <button
-            onClick={triggerManualSidewaysAlert}
-            style={{ padding: '6px', backgroundColor: 'rgba(245, 158, 11, 0.18)', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '10px', color: '#fde68a', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyCenter: 'center', gap: '4px' }}
-          >
-            <Eye style={{ width: '12px', height: '12px' }} />
-            Test Sideways 👁️
-          </button>
-        </div>
-
         {/* Live Metrics Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '0.5rem', fontSize: '0.725rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '0.65rem', fontSize: '0.725rem' }}>
           {/* Attention Score Box */}
-          <div style={{ padding: '8px 10px', backgroundColor: 'rgba(15, 12, 33, 0.85)', border: `1px solid ${scoreColor}40`, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyBetween: 'space-between' }}>
+          <div style={{ padding: '8px 10px', backgroundColor: 'rgba(15, 12, 33, 0.85)', border: `1px solid ${scoreColor}40`, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <span style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block' }}>Attention Score</span>
               <strong style={{ fontSize: '1rem', fontWeight: 800, color: scoreColor }}>{Math.round(attentionScore)}%</strong>
@@ -132,7 +112,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
           </div>
 
           {/* Tab Switch Counter Box */}
-          <div style={{ padding: '8px 10px', backgroundColor: tabSwitchCount > 0 ? 'rgba(244, 63, 94, 0.12)' : 'rgba(15, 12, 33, 0.85)', border: tabSwitchCount > 0 ? '1px solid rgba(244, 63, 94, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyBetween: 'space-between' }}>
+          <div style={{ padding: '8px 10px', backgroundColor: tabSwitchCount > 0 ? 'rgba(244, 63, 94, 0.12)' : 'rgba(15, 12, 33, 0.85)', border: tabSwitchCount > 0 ? '1px solid rgba(244, 63, 94, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <span style={{ fontSize: '0.65rem', color: tabSwitchCount > 0 ? '#fca5a5' : '#94a3b8', display: 'block' }}>Tab Switches</span>
               <strong style={{ fontSize: '1rem', fontWeight: 800, color: tabSwitchCount > 0 ? '#f43f5e' : '#ffffff' }}>{tabSwitchCount} / 3</strong>
@@ -141,7 +121,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
           </div>
 
           {/* AI Vision Status */}
-          <div style={{ padding: '8px 10px', backgroundColor: 'rgba(15, 12, 33, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyBetween: 'space-between' }}>
+          <div style={{ padding: '8px 10px', backgroundColor: 'rgba(15, 12, 33, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <Eye style={{ width: '13px', height: '13px', color: '#06b6d4' }} />
               AI Vision
@@ -150,7 +130,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
           </div>
 
           {/* Audio Equalizer Bar Box */}
-          <div style={{ padding: '8px 10px', backgroundColor: 'rgba(15, 12, 33, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyBetween: 'space-between' }}>
+          <div style={{ padding: '8px 10px', backgroundColor: 'rgba(15, 12, 33, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <Mic style={{ width: '13px', height: '13px', color: '#c084fc' }} />
               Mic Audio
@@ -165,7 +145,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
         <div style={{ marginTop: '0.65rem' }}>
           <button
             onClick={() => setShowLogs(!showLogs)}
-            style={{ width: '100%', padding: '6px 10px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#94a3b8', fontSize: '0.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyBetween: 'space-between' }}
+            style={{ width: '100%', padding: '6px 10px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#94a3b8', fontSize: '0.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
           >
             <span>View Proctor Audit Trail ({proctorLogs.length})</span>
             {showLogs ? <ChevronUp style={{ width: '12px', height: '12px' }} /> : <ChevronDown style={{ width: '12px', height: '12px' }} />}
@@ -238,7 +218,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
                 {activeWarning.message}
               </p>
 
-              <div style={{ display: 'flex', justifyEnd: 'flex-end' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <button
                   onClick={dismissWarning}
                   style={{
