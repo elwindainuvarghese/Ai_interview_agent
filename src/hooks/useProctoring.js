@@ -61,7 +61,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         mediaStreamRef.current = stream;
         setCameraActive(true);
         setMicActive(true);
-        addLog("Ultra Cyberpunk AI Proctor Vision online.", "success");
+        addLog("Ultra Cyberpunk AI Proctor Vision Engine active.", "success");
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -120,7 +120,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     };
   }, [isEnabled, isTerminated, addLog]);
 
-  // 2. ULTRA-POWERFUL MULTILAYER AI VISION DETECTOR (30 FPS)
+  // 2. ULTRA-POWERFUL REAL-TIME AI VISION DETECTOR (30 FPS)
   useEffect(() => {
     if (!isEnabled || isTerminated || !cameraActive) return;
 
@@ -132,7 +132,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
 
     let rotationAngle = 0;
 
-    const runUltraPowerVisionTracking = () => {
+    const runUltraVisionTracking = () => {
       if (isTerminated) return;
       rotationAngle += 0.05;
 
@@ -170,7 +170,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
           const x = pixelIdx % 160;
           const y = Math.floor(pixelIdx / 160);
 
-          // Robust Skin Detection across all lighting
+          // Skin tone detection
           if (r > 40 && g > 20 && b > 10 && r > b) {
             weightedX += x * luma;
             weightedY += y * luma;
@@ -180,10 +180,10 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
             else rightSideLuma += luma;
           }
 
-          // Device / Handheld dark object detector in lower half (y > 60)
+          // Handheld device / phone dark object detector in lower half (y > 60)
           if (y > 60) {
-            const isDarkDevice = luma < 40 && Math.abs(r - g) < 15;
-            const isBrightPhoneScreen = luma > 215 && r > 200 && g > 200 && b > 200;
+            const isDarkDevice = luma < 35 && Math.abs(r - g) < 12;
+            const isBrightPhoneScreen = luma > 220 && r > 205 && g > 205 && b > 205;
             if (isDarkDevice || isBrightPhoneScreen) {
               darkObjectPixelsInLowerFrame++;
             }
@@ -194,23 +194,21 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         let faceCenterY = 0.5;
         let faceCount = 1;
 
-        if (totalSkinPixels < 250) {
-          faceCount = 0; // Candidate stepped away / camera covered
+        if (totalSkinPixels < 200) {
+          faceCount = 0; // No candidate face in camera stream
         } else {
           faceCenterX = weightedX / totalSkinPixels / 160;
           faceCenterY = weightedY / totalSkinPixels / 120;
         }
 
         // TIGHTENED SENSITIVE HEAD TURN & SIDEWAYS GAZE CALCULATIONS
-        const xOffset = Math.abs(faceCenterX - 0.5);
         const lumaAsymmetry = Math.abs(leftSideLuma - rightSideLuma) / (leftSideLuma + rightSideLuma || 1);
 
         const isSidewaysLeft = faceCenterX < 0.40 || (lumaAsymmetry > 0.22 && leftSideLuma < rightSideLuma);
         const isSidewaysRight = faceCenterX > 0.60 || (lumaAsymmetry > 0.22 && rightSideLuma < leftSideLuma);
         const isLookingDown = faceCenterY > 0.64;
 
-        // Device / Phone detected if handheld dark object pixels > 65
-        const isPhoneInFrame = darkObjectPixelsInLowerFrame > 65;
+        const isPhoneInFrame = darkObjectPixelsInLowerFrame > 85;
         const isLookingAway = isSidewaysLeft || isSidewaysRight || isLookingDown;
 
         let poseLabel = 'CENTERED';
@@ -245,7 +243,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
 
           if (!isNoFaceRef.current) {
             isNoFaceRef.current = true;
-            addLog("ALERT: No human candidate detected in camera stream!", "danger");
+            addLog("ALERT: Candidate stepped away from camera stream!", "danger");
 
             noFaceTimerRef.current = setTimeout(() => {
               setIsTerminated(true);
@@ -320,7 +318,7 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
                 }
                 return newGazeCount;
               });
-            }, 800); // Fast 0.8s strike response!
+            }, 800);
           }
         } else {
           if (faceCount > 0 && !isPhoneInFrame) {
@@ -425,10 +423,10 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
         }
       }
 
-      animFrameId = requestAnimationFrame(runUltraPowerVisionTracking);
+      animFrameId = requestAnimationFrame(runUltraVisionTracking);
     };
 
-    runUltraPowerVisionTracking();
+    runUltraVisionTracking();
 
     return () => {
       if (animFrameId) cancelAnimationFrame(animFrameId);
@@ -490,6 +488,37 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     };
   }, [isEnabled, isTerminated, onTerminate, addLog]);
 
+  // Manual Trigger Helper Functions for User Testing
+  const triggerManualPhoneAlert = () => {
+    setPhoneDetectedCount((p) => p + 1);
+    addLog("MANUAL TEST: Mobile Phone / Device breach triggered!", "critical");
+    setActiveWarning({
+      title: "CRITICAL: MOBILE PHONE DETECTED!",
+      message: "AI Vision detected a mobile phone or handheld electronic device! Unauthorized device usage will terminate your session.",
+      type: 'phone'
+    });
+  };
+
+  const triggerManualSidewaysAlert = () => {
+    setLookingAwayCount((prev) => {
+      const newCount = prev + 1;
+      addLog(`MANUAL TEST Gaze Alert ${newCount}/3: Sideways Glance`, "danger");
+      if (newCount >= 3) {
+        setIsTerminated(true);
+        const msg = "Integrity Breach: Exceeded 3 gaze deviation strikes.";
+        setTerminationReason(msg);
+        if (onTerminate) onTerminate({ reason: msg, lookingAwayCount: newCount });
+      } else {
+        setActiveWarning({
+          title: `VISION INTEGRITY ALERT: Strike ${newCount}/3`,
+          message: "AI Vision detected sideways head pose anomaly. Please maintain direct eye contact with the camera.",
+          type: 'gaze'
+        });
+      }
+      return newCount;
+    });
+  };
+
   const dismissWarning = () => setActiveWarning(null);
 
   return {
@@ -507,6 +536,8 @@ export function useProctoring({ onTerminate, isEnabled = true }) {
     audioLevel,
     proctorLogs,
     facePosition,
+    triggerManualPhoneAlert,
+    triggerManualSidewaysAlert,
     dismissWarning,
   };
 }

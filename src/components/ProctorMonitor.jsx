@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Camera, Eye, AlertTriangle, Lock, Mic, Activity, AlertCircle, X, RefreshCw, ChevronDown, ChevronUp, Zap, Target } from 'lucide-react';
+import { Shield, Camera, Eye, AlertTriangle, Lock, Mic, Activity, AlertCircle, X, RefreshCw, ChevronDown, ChevronUp, Zap, Target, Smartphone } from 'lucide-react';
 
 export default function ProctorMonitor({ proctorState, onRestart }) {
   const [showLogs, setShowLogs] = useState(false);
@@ -12,6 +12,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
     micActive,
     tabSwitchCount,
     lookingAwayCount,
+    phoneDetectedCount,
     attentionScore,
     isTerminated,
     terminationReason,
@@ -19,6 +20,8 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
     audioLevel,
     proctorLogs,
     facePosition,
+    triggerManualPhoneAlert,
+    triggerManualSidewaysAlert,
     dismissWarning
   } = proctorState;
 
@@ -36,7 +39,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
           top: '1.25rem',
           right: '1.25rem',
           zIndex: 9990,
-          width: '310px',
+          width: '320px',
           backgroundColor: 'rgba(9, 7, 24, 0.95)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
@@ -64,7 +67,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 10px', backgroundColor: 'rgba(244, 63, 94, 0.18)', border: '1px solid rgba(244, 63, 94, 0.4)', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 800, color: '#fca5a5' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#f43f5e', boxShadow: '0 0 8px #f43f5e', animation: 'pulse 1.5s infinite' }} />
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#f43f5e', boxShadow: '0 0 8px #f43f5e' }} />
             <span>LIVE MONITORED</span>
           </div>
         </div>
@@ -99,17 +102,33 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
           </div>
         </div>
 
+        {/* Live Test Trigger Control Buttons */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '0.65rem' }}>
+          <button
+            onClick={triggerManualPhoneAlert}
+            style={{ padding: '6px', backgroundColor: 'rgba(244, 63, 94, 0.18)', border: '1px solid rgba(244, 63, 94, 0.4)', borderRadius: '10px', color: '#fca5a5', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyCenter: 'center', gap: '4px' }}
+          >
+            <Smartphone style={{ width: '12px', height: '12px' }} />
+            Test Phone 📱
+          </button>
+          <button
+            onClick={triggerManualSidewaysAlert}
+            style={{ padding: '6px', backgroundColor: 'rgba(245, 158, 11, 0.18)', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '10px', color: '#fde68a', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyCenter: 'center', gap: '4px' }}
+          >
+            <Eye style={{ width: '12px', height: '12px' }} />
+            Test Sideways 👁️
+          </button>
+        </div>
+
         {/* Live Metrics Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '0.65rem', fontSize: '0.725rem' }}>
-          {/* Attention Score Radial Gauge Box */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '0.5rem', fontSize: '0.725rem' }}>
+          {/* Attention Score Box */}
           <div style={{ padding: '8px 10px', backgroundColor: 'rgba(15, 12, 33, 0.85)', border: `1px solid ${scoreColor}40`, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyBetween: 'space-between' }}>
             <div>
               <span style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block' }}>Attention Score</span>
               <strong style={{ fontSize: '1rem', fontWeight: 800, color: scoreColor }}>{Math.round(attentionScore)}%</strong>
             </div>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: `3px solid ${scoreColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 800, color: scoreColor, boxShadow: `0 0 10px ${scoreColor}40` }}>
-              <Activity style={{ width: '14px', height: '14px' }} />
-            </div>
+            <Activity style={{ width: '16px', height: '16px', color: scoreColor }} />
           </div>
 
           {/* Tab Switch Counter Box */}
@@ -122,7 +141,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
           </div>
 
           {/* AI Vision Status */}
-          <div style={{ padding: '8px 10px', backgroundColor: 'rgba(15, 12, 33, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', display: 'flex', itemsCenter: 'center', justifyBetween: 'space-between' }}>
+          <div style={{ padding: '8px 10px', backgroundColor: 'rgba(15, 12, 33, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyBetween: 'space-between' }}>
             <span style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <Eye style={{ width: '13px', height: '13px', color: '#06b6d4' }} />
               AI Vision
@@ -131,7 +150,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
           </div>
 
           {/* Audio Equalizer Bar Box */}
-          <div style={{ padding: '8px 10px', backgroundColor: 'rgba(15, 12, 33, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', display: 'flex', itemsCenter: 'center', justifyBetween: 'space-between' }}>
+          <div style={{ padding: '8px 10px', backgroundColor: 'rgba(15, 12, 33, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyBetween: 'space-between' }}>
             <span style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <Mic style={{ width: '13px', height: '13px', color: '#c084fc' }} />
               Mic Audio
@@ -155,7 +174,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
           {showLogs && (
             <div style={{ marginTop: '6px', maxHeight: '120px', overflowY: 'auto', padding: '8px', backgroundColor: '#000000', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.65rem', fontFamily: 'monospace' }}>
               {proctorLogs.map((log, idx) => (
-                <div key={idx} style={{ marginBottom: '4px', color: log.type === 'danger' ? '#f43f5e' : log.type === 'warning' ? '#f59e0b' : '#cbd5e1' }}>
+                <div key={idx} style={{ marginBottom: '4px', color: log.type === 'danger' || log.type === 'critical' ? '#f43f5e' : log.type === 'warning' ? '#f59e0b' : '#cbd5e1' }}>
                   <span style={{ color: '#64748b' }}>[{log.time}]</span> {log.message}
                 </div>
               ))}
@@ -164,7 +183,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
         </div>
       </motion.div>
 
-      {/* 2. Security Strike Warning Toast Overlay Modal (FIXED OVERFLOW & PADDING) */}
+      {/* 2. Security Strike Warning Toast Overlay Modal */}
       <AnimatePresence>
         {activeWarning && (
           <div 
@@ -305,7 +324,7 @@ export default function ProctorMonitor({ proctorState, onRestart }) {
                   Violation Audit Trail
                 </span>
                 <div style={{ fontSize: '0.725rem', fontFamily: 'monospace', color: '#e2e8f0' }}>
-                  {proctorLogs.filter(l => l.type === 'danger' || l.type === 'warning').map((log, i) => (
+                  {proctorLogs.filter(l => l.type === 'danger' || l.type === 'warning' || l.type === 'critical').map((log, i) => (
                     <div key={i} style={{ marginBottom: '4px' }}>
                       <span style={{ color: '#f43f5e' }}>[{log.time}]</span> {log.message}
                     </div>
