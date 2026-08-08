@@ -18,7 +18,8 @@ function appendMessage(type, text) {
   const chatHistory = document.getElementById('chat-history');
   const div = document.createElement('div');
   div.className = `chat-bubble chat-${type}`;
-  div.innerText = text;
+  const cleanText = text ? text.replace(/\[DAY:\d+\]/gi, '').trim() : '';
+  div.innerText = cleanText;
   chatHistory.appendChild(div);
   chatHistory.scrollTop = chatHistory.scrollHeight;
 }
@@ -56,7 +57,17 @@ async function startInterview() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sessionId: currentSessionId,
-        candidate: { name: 'Alex' }
+        candidate: {
+          member: { name: 'Sarah Johnson', jobRole: 'Senior Data Engineer' },
+          missions: [
+            { day: 1, passed: true },
+            { day: 3, passed: true },
+            { day: 7, passed: true },
+            { day: 12, passed: true },
+            { day: 18, passed: true },
+            { day: 22, passed: true }
+          ]
+        }
       })
     });
     
