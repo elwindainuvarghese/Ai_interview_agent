@@ -1,0 +1,44 @@
+/* Form Container */
+.form-container {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+#contact-form {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  max-width: 800px;
+  padding: 1rem 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pill-input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  padding: 0.8rem 1.5rem;
+  border-radius: 50px;
+  outline: none;
+  flex: 1;
+  min-width: 200px;
+  transition: all 0.3s ease;
+}
+
+.pill-input:focus {
+  border-color: rgba(0, 243, 255, 0.5);
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.pill-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.pill-submit {
+  flex-shrink: 0;
+}

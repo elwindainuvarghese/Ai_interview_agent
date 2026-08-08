@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Interview Agent</title>
+    <!-- Modern Sans Serif Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/components/button.css">
+    <link rel="stylesheet" href="/components/orb.css">
+    <link rel="stylesheet" href="/components/chat.css">
+    <link rel="stylesheet" href="/components/calendar.css">
+    <link rel="stylesheet" href="/components/form.css">
+  </head>
+  <body>
+    <div id="app">
+      <header class="app-header">
+        <h1>Welcome to your AI Interview</h1>
+        <p>Prepare to engage with the next generation of conversational AI.</p>
+      </header>
+      
+      <main class="dashboard-grid">
+        <!-- Left Panel: Chat Interface -->
+        <aside class="glass-panel chat-panel" id="chat-container">
+          <h2>Conversation</h2>
+          <div id="chat-history"></div>
+          <div class="chat-input-container">
+            <input type="text" id="chat-input" class="pill-input" placeholder="Type your response..." disabled />
+            <button id="chat-send" class="primary-btn glow-btn chat-send-btn" disabled>Send</button>
+          </div>
+        </aside>
+
+        <!-- Center Panel: The AI Agent Orb -->
+        <section class="orb-container">
+          <canvas id="ai-orb"></canvas>
+          <div class="glow-ring"></div>
+          <button id="start-btn" class="primary-btn glow-btn">Start Interview</button>
+        </section>
+
+        <!-- Right Panel: Calendar & Scheduling -->
+        <aside class="glass-panel calendar-panel" id="calendar-container">
+          <h2>Upcoming Sessions</h2>
+          <div id="calendar-widget"></div>
+        </aside>
+      </main>
+
+      <!-- Bottom Panel: Form -->
+      <footer class="form-container">
+        <form id="contact-form" class="glass-panel">
+          <input type="text" class="pill-input" placeholder="Your Name" />
+          <input type="email" class="pill-input" placeholder="Your Email" />
+          <button type="submit" class="pill-submit primary-btn glow-btn">Sync Calendar</button>
+        </form>
+      </footer>
+    </div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
